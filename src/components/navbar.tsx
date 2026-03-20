@@ -50,7 +50,7 @@ export function Navbar() {
           <img
             src="/logos/103058_Blazr_Flat_RT_R_01.svg"
             alt="Blazr"
-            className="h-8 w-auto"
+            className="h-10 w-auto"
           />
         </Link>
 

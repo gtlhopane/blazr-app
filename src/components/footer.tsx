@@ -28,7 +28,7 @@ export function Footer() {
               <img
                 src="/logos/103058_Blazr_Flat_RT_R_02.svg"
                 alt="Blazr"
-                className="h-10 w-auto"
+                className="h-32 w-32 rounded-2xl"
               />
             </div>
             <p className="text-sm text-[#666] leading-relaxed max-w-sm">

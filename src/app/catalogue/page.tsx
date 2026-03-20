@@ -105,7 +105,13 @@ export default function CataloguePage() {
             {products.map((product) => (
               <Card key={product.id} className="card-surface gold-glow-hover transition-all duration-300 hover:border-[#FAD03F]/20">
                 <CardContent className="p-6">
-                  <div className="mb-4 flex items-start justify-between">
+                  {product.image_url ? (
+                    <div className="mb-4 overflow-hidden rounded-xl">
+                      <img src={product.image_url} alt={product.name} className="h-40 w-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className="mb-4 flex h-40 items-start justify-between">
+                  )}
                     <div className="flex items-center gap-3">
                       <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#2a2a2a] bg-[#1a1a1a]/80 text-2xl">
                         {product.categories?.icon || "📦"}
@@ -120,7 +126,11 @@ export default function CataloguePage() {
                         Featured
                       </Badge>
                     )}
-                  </div>
+                  {product.image_url ? (
+                    ""
+                  ) : (
+                    </div>
+                  )}
 
                   <p className="mb-5 text-sm text-[#888] leading-relaxed line-clamp-3">
                     {product.description}
