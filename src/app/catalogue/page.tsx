@@ -49,8 +49,7 @@ export default function CataloguePage() {
           .order("sort_order"),
       ])
 
-      console.log("[CATALOGUE] Products data:", prods?.length, "products")
-      console.log("[CATALOGUE] First product image_url:", prods?.[0]?.image_url)
+      console.log("[CATALOGUE] Products data:", prods?.length, "products, first item:", JSON.stringify(prods?.[0]))
       console.log("[CATALOGUE] Products error:", prodError)
 
       setProducts((prods as Product[]) || [])
@@ -139,12 +138,12 @@ export default function CataloguePage() {
                         alt={product.name}
                         className="h-40 w-full object-cover"
                         onError={(e) => {
+                          console.log("[IMG ERROR]", product.name, "URL:", product.image_url)
                           const img = e.target as HTMLImageElement
                           img.style.display = 'none'
-                          const fallback = img.nextElementSibling as HTMLElement
-                          if (fallback) fallback.style.display = 'flex'
                         }}
                       />
+                      <div className="mt-1 text-xs text-[#444] truncate">{product.image_url}</div>
                     </div>
                   ) : null}
 
