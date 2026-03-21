@@ -128,7 +128,6 @@ export default function CataloguePage() {
             {filteredProducts.map((product) => (
               <Card key={product.id} className="card-surface gold-glow-hover transition-all duration-300 hover:border-[#FAD03F]/20">
                 <CardContent className="p-6">
-                  {/* Product image */}
                   {product.image_url ? (
                     <div className="mb-4 overflow-hidden rounded-xl">
                       <img
@@ -136,43 +135,29 @@ export default function CataloguePage() {
                         alt={product.name}
                         className="h-40 w-full object-cover"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                          (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                          const img = e.target as HTMLImageElement
+                          img.style.display = 'none'
+                          const fallback = img.nextElementSibling as HTMLElement
+                          if (fallback) fallback.style.display = 'flex'
                         }}
                       />
-                      <div className="hidden flex h-40 items-start justify-between">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#2a2a2a] bg-[#1a1a1a]/80 text-2xl">
-                          {product.categories?.icon || "📦"}
-                        </div>
-                        <div>
-                          <h3 className="font-semibold">{product.name}</h3>
-                          <p className="text-xs text-[#666]">{product.categories?.name}</p>
-                        </div>
-                        {product.is_featured && (
-                          <Badge className="bg-[#FAD03F]/10 text-[#FAD03F] border-[#FAD03F]/20 text-xs">
-                            Featured
-                          </Badge>
-                        )}
-                      </div>
                     </div>
-                  ) : (
-                    <div className="mb-4 flex h-40 flex-col items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#2a2a2a] bg-[#1a1a1a]/80 text-2xl">
-                          {product.categories?.icon || "📦"}
-                        </div>
-                        <div>
-                          <h3 className="font-semibold">{product.name}</h3>
-                          <p className="text-xs text-[#666]">{product.categories?.name}</p>
-                        </div>
-                        {product.is_featured && (
-                          <Badge className="bg-[#FAD03F]/10 text-[#FAD03F] border-[#FAD03F]/20 text-xs">
-                            Featured
-                          </Badge>
-                        )}
-                      </div>
+                  ) : null}
+
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#2a2a2a] bg-[#1a1a1a]/80 text-2xl">
+                      {product.categories?.icon || "📦"}
                     </div>
-                  )}
+                    <div>
+                      <h3 className="font-semibold">{product.name}</h3>
+                      <p className="text-xs text-[#666]">{product.categories?.name}</p>
+                    </div>
+                    {product.is_featured && (
+                      <Badge className="bg-[#FAD03F]/10 text-[#FAD03F] border-[#FAD03F]/20 text-xs ml-auto">
+                        Featured
+                      </Badge>
+                    )}
+                  </div>
 
                   <p className="mb-5 text-sm text-[#888] leading-relaxed line-clamp-3">
                     {product.description}
