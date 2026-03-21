@@ -36,7 +36,7 @@ export default function CataloguePage() {
     const supabase = createClient()
 
     async function load() {
-      const [{ data: prods }, { data: cats }] = await Promise.all([
+      const [{ data: prods, error: prodError }, { data: cats }] = await Promise.all([
         supabase
           .from("products")
           .select("*, categories(name, icon)")
@@ -48,6 +48,10 @@ export default function CataloguePage() {
           .eq("is_active", true)
           .order("sort_order"),
       ])
+
+      console.log("[CATALOGUE] Products data:", prods?.length, "products")
+      console.log("[CATALOGUE] First product image_url:", prods?.[0]?.image_url)
+      console.log("[CATALOGUE] Products error:", prodError)
 
       setProducts((prods as Product[]) || [])
       setCategories((cats as Category[]) || [])
