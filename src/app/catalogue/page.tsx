@@ -22,6 +22,7 @@ interface Product {
   moq: number
   unit: string
   is_featured: boolean
+  image_url: string | null
   categories: { name: string; icon: string } | null
 }
 
@@ -40,8 +41,7 @@ export default function CataloguePage() {
           .from("products")
           .select("*, categories(name, icon)")
           .eq("is_active", true)
-          .order("is_featured", { ascending: false })
-          .header("Cache-Control", "no-cache"),
+          .order("is_featured", { ascending: false }),
         supabase
           .from("categories")
           .select("id, name, icon")
