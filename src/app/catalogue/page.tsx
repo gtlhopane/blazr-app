@@ -29,6 +29,7 @@ export default function CataloguePage() {
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
+  const [activeCategory, setActiveCategory] = useState<string | null>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -55,6 +56,10 @@ export default function CataloguePage() {
     load()
   }, [])
 
+  const filteredProducts = activeCategory
+    ? products.filter((p) => p.categories?.name === activeCategory)
+    : products
+
   return (
     <div className="min-h-screen">
       {/* Header */}
@@ -75,14 +80,27 @@ export default function CataloguePage() {
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         {/* Categories nav */}
         <div className="mb-10 flex flex-wrap gap-2">
-          <Badge variant="outline" className="border-[#FAD03F]/30 text-[#FAD03F] bg-[#FAD03F]/5 cursor-pointer">
+          <Badge
+            variant="outline"
+            onClick={() => setActiveCategory(null)}
+            className={`cursor-pointer transition-colors ${
+              activeCategory === null
+                ? "bg-[#FAD03F]/10 border-[#FAD03F] text-[#FAD03F]"
+                : "border-[#2a2a2a] text-[#888] hover:border-[#444]"
+            }`}
+          >
             All Products
           </Badge>
           {categories.map((cat) => (
             <Badge
               key={cat.id}
               variant="outline"
-              className="border-[#2a2a2a] text-[#888] hover:border-[#444] cursor-pointer"
+              onClick={() => setActiveCategory(cat.name)}
+              className={`cursor-pointer transition-colors ${
+                activeCategory === cat.name
+                  ? "bg-[#FAD03F]/10 border-[#FAD03F] text-[#FAD03F]"
+                  : "border-[#2a2a2a] text-[#888] hover:border-[#444]"
+              }`}
             >
               {cat.icon} {cat.name}
             </Badge>
@@ -99,10 +117,14 @@ export default function CataloguePage() {
               </Card>
             ))}
           </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="col-span-full text-center py-16 text-[#666]">
+            No products found in this category.
+          </div>
         ) : (
           /* Products grid */
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {products.map((product) => (
+            {filteredProducts.map((product) => (
               <Card key={product.id} className="card-surface gold-glow-hover transition-all duration-300 hover:border-[#FAD03F]/20">
                 <CardContent className="p-6">
                   {product.image_url ? (
