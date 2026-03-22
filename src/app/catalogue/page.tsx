@@ -6,8 +6,9 @@ import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { ArrowRight } from "lucide-react"
+import { ArrowRight, ShoppingBag } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { useCart } from "@/contexts/CartContext"
 
 interface Category {
   id: string
@@ -45,6 +46,7 @@ export default function CataloguePage() {
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null)
   // selectedTier: productId -> 50 | 100 | null
   const [selectedTier, setSelectedTier] = useState<Record<string, number | null>>({})
+  const { addToCart, openDrawer } = useCart()
 
   // Load tier selections from localStorage on mount
   useEffect(() => {
@@ -366,19 +368,58 @@ export default function CataloguePage() {
                       const tier = selectedTier[product.id]
                       const isPack = product.unit === 'pack'
                       return (
-                        <Link
-                          href={
-                            isPack
-                              ? `/apply?product=${encodeURIComponent(product.name)}&qty=1&price=${product.wholesale_price}`
-                              : tier
-                                ? `/apply?product=${encodeURIComponent(product.name)}&qty=${tier}&price=${product.wholesale_price * tier}`
-                                : "/apply"
-                          }
-                        >
-                          <Button size="sm" className="bg-[#FAD03F] hover:bg-[#f5e07a] text-black text-xs h-8 gap-1.5">
-                            Order <ArrowRight className="h-3 w-3" />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openDrawer()}
+                            className="border-[#2a2a2a] text-[#888] hover:bg-[#1a1a1a] hover:text-white text-xs h-8 gap-1.5"
+                          >
+                            <ShoppingBag className="h-3 w-3" />
+                            Cart
                           </Button>
-                        </Link>
+                          <Button
+                            size="sm"
+                            className="bg-[#FAD03F] hover:bg-[#f5e07a] text-black text-xs h-8 gap-1.5"
+                            onClick={() => {
+                              if (isPack) {
+                                addToCart({
+                                  productId: product.id,
+                                  name: product.name,
+                                  price: product.wholesale_price,
+                                  image_url: product.image_url,
+                                  category: product.categories?.name || 'Unknown',
+                                  unit: product.unit,
+                                  moq: product.moq,
+                                }, 1)
+                              } else if (tier) {
+                                addToCart({
+                                  productId: product.id,
+                                  name: product.name,
+                                  price: product.wholesale_price,
+                                  image_url: product.image_url,
+                                  category: product.categories?.name || 'Unknown',
+                                  unit: product.unit,
+                                  moq: product.moq,
+                                }, tier)
+                              } else {
+                                // No tier selected — use MOQ as default
+                                addToCart({
+                                  productId: product.id,
+                                  name: product.name,
+                                  price: product.wholesale_price,
+                                  image_url: product.image_url,
+                                  category: product.categories?.name || 'Unknown',
+                                  unit: product.unit,
+                                  moq: product.moq,
+                                }, product.moq)
+                              }
+                              openDrawer()
+                            }}
+                          >
+                            Add to Cart <ArrowRight className="h-3 w-3" />
+                          </Button>
+                        </div>
                       )
                     })()}
                   </div>

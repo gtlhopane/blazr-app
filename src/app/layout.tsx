@@ -2,9 +2,7 @@ import type { Metadata, Viewport } from "next"
 import { Poppins } from "next/font/google"
 import localFont from "next/font/local"
 import "./globals.css"
-import { Navbar } from "@/components/navbar"
-import { Footer } from "@/components/footer"
-import { Toaster } from "@/components/ui/sonner"
+import CartLayout from "@/components/cart-layout"
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -56,10 +54,7 @@ export default function RootLayout({
         className={`${poppins.variable} ${boldena.variable} min-h-screen flex flex-col bg-[#0A0A0A] text-white antialiased`}
         style={{ fontFamily: "var(--font-poppins), sans-serif" }}
       >
-        <Navbar />
-        <main className="flex-1">{children}</main>
-        <Footer />
-        <Toaster />
+        <CartLayout>{children}</CartLayout>
       </body>
     </html>
   )

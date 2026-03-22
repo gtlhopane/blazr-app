@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Eye, EyeOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
+import { useCart } from "@/contexts/CartContext"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -17,19 +18,26 @@ export default function LoginPage() {
   const [showPw, setShowPw] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const { loadCartFromSupabase } = useCart()
+  const returnTo = searchParams.get("returnTo") || "/checkout"
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     const supabase = createClient()
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       toast.error(error.message)
       setLoading(false)
     } else {
       toast.success("Welcome back!")
-      router.push("/buyer")
+      // Sync cart from Supabase
+      if (data.user) {
+        await loadCartFromSupabase(data.user.id)
+      }
+      router.push(returnTo)
       router.refresh()
     }
   }
