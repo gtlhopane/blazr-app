@@ -18,8 +18,8 @@ function getMOQStep(unit: string): number {
   return 10
 }
 
-function formatPrice(cents: number): string {
-  return `R${(cents / 100).toLocaleString("en-ZA", { minimumFractionDigits: 0 })}`
+function formatPrice(amount: number): string {
+  return `R${amount.toLocaleString("en-ZA", { minimumFractionDigits: 0 })}`
 }
 
 export function CartDrawer() {

@@ -12,8 +12,8 @@ import { CheckCircle, ArrowLeft, Copy, Check } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
 import Link from "next/link"
 
-function formatPrice(cents: number): string {
-  return `R${(cents / 100).toLocaleString("en-ZA", { minimumFractionDigits: 0 })}`
+function formatPrice(amount: number): string {
+  return `R${amount.toLocaleString("en-ZA", { minimumFractionDigits: 0 })}`
 }
 
 const BANK_DETAILS = {

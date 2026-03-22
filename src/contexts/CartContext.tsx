@@ -7,7 +7,7 @@ import { toast } from "sonner"
 export interface CartItem {
   productId: string
   name: string
-  price: number // in cents
+  price: number // in RANDs (as stored in Supabase)
   quantity: number // actual quantity (already multiplied by MOQ)
   image_url: string | null
   category: string
@@ -19,7 +19,7 @@ export interface CartItem {
 interface CartContextType {
   cartItems: CartItem[]
   cartCount: number
-  cartTotal: number // in cents
+  cartTotal: number // in RANDs
   addToCart: (item: Omit<CartItem, "quantity">, qty: number) => void
   removeFromCart: (productId: string) => void
   updateQuantity: (productId: string, qty: number) => void

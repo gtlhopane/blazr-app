@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
       buyer_phone,
       buyer_company,
       delivery_address,
-      notes,
+      notes: order_notes,
       items,
     } = body
 
@@ -34,19 +34,32 @@ export async function POST(req: NextRequest) {
       0
     )
 
+    // Build rich notes field with all buyer/order info
+    const itemsList = items
+      .map(
+        (item: { name: string; quantity: number; unit_price: number }) =>
+          `${item.name}: ${item.quantity} × R${item.unit_price} = R${item.quantity * item.unit_price}`
+      )
+      .join(" | ")
+
+    const notes = [
+      `Invoice: ${invoice_number}`,
+      `Buyer: ${buyer_name} | ${buyer_email} | ${buyer_phone}${buyer_company ? ` | ${buyer_company}` : ""}`,
+      `Delivery: ${delivery_address}`,
+      order_notes ? `Notes: ${order_notes}` : null,
+      `Items: ${itemsList}`,
+      `Total: R${total_price.toLocaleString()}`,
+    ]
+      .filter(Boolean)
+      .join("\n")
+
     // Insert into orders table
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert({
         status: "pending",
-        total: Math.round(total_price / 100),
-        buyer_name,
-        buyer_email,
-        buyer_phone,
-        buyer_company: buyer_company || null,
-        delivery_address,
-        notes: notes || null,
-        invoice_number,
+        total: Math.round(total_price), // stored in RANDs
+        notes,
       })
       .select()
       .single()
@@ -73,14 +86,14 @@ export async function POST(req: NextRequest) {
 
     // Send emails via Resend
     try {
-      const itemsList = items
+      const itemsHtmlList = items
         .map(
           (item: { name: string; quantity: number; unit_price: number }) =>
-            `• ${item.name}: ${item.quantity} × R${(item.unit_price / 100).toFixed(0)} = R${((item.quantity * item.unit_price) / 100).toFixed(0)}`
+            `<tr><td style="padding: 8px 0; border-bottom: 1px solid #2a2a2a;">${item.name}</td><td style="padding: 8px 0; border-bottom: 1px solid #2a2a2a; text-align: center;">${item.quantity}</td><td style="padding: 8px 0; border-bottom: 1px solid #2a2a2a; text-align: right;">R${item.unit_price}</td><td style="padding: 8px 0; border-bottom: 1px solid #2a2a2a; text-align: right; color: #FAD03F; font-weight: bold;">R${item.quantity * item.unit_price}</td></tr>`
         )
-        .join("\n")
+        .join("")
 
-      const bankDetailsHtml = `
+      const bankDetailsBlock = `
         <div style="background: rgba(250,208,63,0.08); border: 1px solid rgba(250,208,63,0.25); border-radius: 12px; padding: 20px; margin: 20px 0;">
           <h3 style="color: #FAD03F; font-size: 14px; margin: 0 0 12px; text-transform: uppercase; letter-spacing: 1px;">Bank Transfer Details</h3>
           <table style="width: 100%; font-size: 14px;">
@@ -108,7 +121,7 @@ export async function POST(req: NextRequest) {
             <h2 style="font-size: 16px; color: #4ade80; margin: 0 0 12px;">✓ Order Received!</h2>
             <p style="margin: 4px 0; font-size: 14px;">Thank you for your order, <strong>${buyer_name}</strong>!</p>
             <p style="margin: 8px 0 4px; font-size: 14px;"><strong>Invoice:</strong> <span style="color: #FAD03F; font-family: monospace; font-weight: bold;">${invoice_number}</span></p>
-            <p style="margin: 4px 0; font-size: 14px;"><strong>Order Total:</strong> <span style="color: #FAD03F; font-weight: bold; font-size: 18px;">R${(total_price / 100).toLocaleString()}</span></p>
+            <p style="margin: 4px 0; font-size: 14px;"><strong>Order Total:</strong> <span style="color: #FAD03F; font-weight: bold; font-size: 18px;">R${total_price.toLocaleString()}</span></p>
           </div>
 
           <div style="background: #1a1a1a; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #2a2a2a;">
@@ -118,10 +131,28 @@ export async function POST(req: NextRequest) {
 
           <div style="background: #1a1a1a; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #2a2a2a;">
             <h3 style="font-size: 14px; color: #888; margin: 0 0 12px; text-transform: uppercase; letter-spacing: 1px;">Order Items</h3>
-            <pre style="margin: 0; font-size: 13px; color: #ccc; white-space: pre-wrap; font-family: Arial, sans-serif;">${itemsList}</pre>
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+              <thead>
+                <tr style="color: #888; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">
+                  <th style="text-align: left; padding: 8px 0;">Product</th>
+                  <th style="text-align: center; padding: 8px 0;">Qty</th>
+                  <th style="text-align: right; padding: 8px 0;">Unit</th>
+                  <th style="text-align: right; padding: 8px 0;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsHtmlList}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="3" style="padding: 12px 0 0; text-align: right; color: #fff; font-weight: bold; font-size: 16px;">Total</td>
+                  <td style="padding: 12px 0 0; text-align: right; color: #FAD03F; font-weight: bold; font-size: 16px;">R${total_price.toLocaleString()}</td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
 
-          ${bankDetailsHtml}
+          ${bankDetailsBlock}
 
           <p style="font-size: 13px; color: #888; margin-bottom: 0;">
             We&apos;ll process your order and contact you at <strong>${buyer_phone}</strong> within 24 hours to confirm.
@@ -144,7 +175,7 @@ export async function POST(req: NextRequest) {
           <div style="background: rgba(250,208,63,0.08); border: 1px solid rgba(250,208,63,0.25); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
             <h2 style="font-size: 16px; color: #FAD03F; margin: 0 0 12px;">New Order — Action Required</h2>
             <p style="margin: 4px 0; font-size: 14px;"><strong>Invoice:</strong> <span style="color: #FAD03F; font-family: monospace; font-weight: bold;">${invoice_number}</span></p>
-            <p style="margin: 4px 0; font-size: 14px;"><strong>Order Total:</strong> <span style="color: #FAD03F; font-weight: bold; font-size: 18px;">R${(total_price / 100).toLocaleString()}</span></p>
+            <p style="margin: 4px 0; font-size: 14px;"><strong>Order Total:</strong> <span style="color: #FAD03F; font-weight: bold; font-size: 18px;">R${total_price.toLocaleString()}</span></p>
             <p style="margin: 4px 0; font-size: 14px;"><strong>Order ID:</strong> <span style="font-family: monospace;">${order.id}</span></p>
           </div>
 
@@ -159,12 +190,29 @@ export async function POST(req: NextRequest) {
           <div style="background: #1a1a1a; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #2a2a2a;">
             <h3 style="font-size: 14px; color: #888; margin: 0 0 12px; text-transform: uppercase; letter-spacing: 1px;">Delivery Address</h3>
             <p style="margin: 0; font-size: 14px; color: #ccc;">${delivery_address}</p>
-            ${notes ? `<p style="margin: 8px 0 0; font-size: 13px; color: #888;"><strong>Notes:</strong> ${notes}</p>` : ""}
           </div>
 
           <div style="background: #1a1a1a; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #2a2a2a;">
             <h3 style="font-size: 14px; color: #888; margin: 0 0 12px; text-transform: uppercase; letter-spacing: 1px;">Order Items</h3>
-            <pre style="margin: 0; font-size: 13px; color: #ccc; white-space: pre-wrap; font-family: Arial, sans-serif;">${itemsList}</pre>
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+              <thead>
+                <tr style="color: #888; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">
+                  <th style="text-align: left; padding: 8px 0;">Product</th>
+                  <th style="text-align: center; padding: 8px 0;">Qty</th>
+                  <th style="text-align: right; padding: 8px 0;">Unit</th>
+                  <th style="text-align: right; padding: 8px 0;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsHtmlList}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="3" style="padding: 12px 0 0; text-align: right; color: #fff; font-weight: bold; font-size: 16px;">Total</td>
+                  <td style="padding: 12px 0 0; text-align: right; color: #FAD03F; font-weight: bold; font-size: 16px;">R${total_price.toLocaleString()}</td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
 
           <p style="color: #555; font-size: 12px; text-align: center; margin-top: 30px;">
@@ -173,7 +221,7 @@ export async function POST(req: NextRequest) {
         </div>
       `
 
-      // Send to buyer
+      // Send buyer email
       if (buyer_email && buyer_email.includes("@")) {
         await fetch("https://api.resend.com/emails", {
           method: "POST",
@@ -190,7 +238,7 @@ export async function POST(req: NextRequest) {
         })
       }
 
-      // Send to admin
+      // Send admin email
       await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
@@ -200,7 +248,7 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           from: "Blazr Wholesale <blazr@biomuti.co.za>",
           to: ["gtlhopane@gmail.com"],
-          subject: `New Order ${invoice_number} — ${buyer_name} (R${(total_price / 100).toLocaleString()})`,
+          subject: `New Order ${invoice_number} — ${buyer_name} (R${total_price.toLocaleString()})`,
           html: adminEmailHtml,
         }),
       })
