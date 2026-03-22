@@ -170,10 +170,11 @@ export default function VapesPage() {
 
     setSubmitting(true)
     try {
-      const res = await fetch("/api/vape-order", {
+      const res = await fetch("/api/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          category: "vapes",
           buyer_name: buyerForm.name,
           buyer_email: buyerForm.email,
           buyer_phone: buyerForm.phone,
@@ -181,6 +182,7 @@ export default function VapesPage() {
           items: selectedItems.map((item) => ({
             strain_id: item.product.slug,
             strain_name: item.product.name,
+            product_id: item.product.id,
             quantity: item.quantity,
             unit_price: UNIT_PRICE * 100,
           })),
