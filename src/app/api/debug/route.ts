@@ -1,25 +1,20 @@
-import { createClient } from "@supabase/supabase-js"
+import { NextResponse } from "next/server"
+import { createSupabaseAdmin } from "@/lib/supabase/admin"
 
 export async function GET() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-
-  const { data: prods, error: prodError } = await supabase
-    .from("products")
-    .select("*, categories(name, icon)")
-    .eq("is_active", true)
-    .limit(3)
-
-  return Response.json({
-    count: prods?.length ?? 0,
-    error: prodError?.message ?? null,
-    firstProduct: prods?.[0] ? {
-      id: prods[0].id,
-      name: prods[0].name,
-      image_url: prods[0].image_url,
-      keys: Object.keys(prods[0])
-    } : null
-  })
+  try {
+    const admin = createSupabaseAdmin()
+    const { data, error } = await admin.from("orders").select("id").limit(1)
+    return NextResponse.json({ 
+      env: {
+        SUPABASE_URL: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+        SERVICE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+        SERVICE_KEY_PREFIX: (process.env.SUPABASE_SERVICE_ROLE_KEY || "").substring(0, 20),
+      },
+      supabaseError: error,
+      orders: data
+    })
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 })
+  }
 }
