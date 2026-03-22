@@ -11,12 +11,13 @@ interface GooglePlacesInputProps {
   province?: string
 }
 
-declare global {
-  interface Window {
-    google: typeof google
-    initGooglePlaces: () => void
-  }
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+declare const google: any
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+declare const window: Window & { initGooglePlaces?: () => void; google: typeof google }
+
+
 
 let scriptLoaded = false
 let scriptLoading = false
