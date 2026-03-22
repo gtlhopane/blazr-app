@@ -171,6 +171,18 @@ export default function CataloguePage() {
           </div>
         )}
 
+        {/* Edibles nano explainer */}
+        {activeCategory === 'Edibles' && (
+          <div className="mb-8 p-5 rounded-xl border border-green-500/20 bg-green-500/5">
+            <h3 className="text-green-400 font-semibold text-sm mb-2">Why Nano-Emulsified Edibles?</h3>
+            <p className="text-slate-400 text-xs leading-relaxed">
+              All Blazr edibles are nano-emulsified — breaking active compounds into microscopic particles for{" "}
+              <span className="text-white font-medium">faster onset (under 15 minutes)</span>,{" "}
+              <span className="text-white font-medium">higher bioavailability</span>, and a more predictable effect than traditional edibles. A demonstrably superior delivery system.
+            </p>
+          </div>
+        )}
+
         {loading ? (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3, 4, 5, 6].map((i) => (
