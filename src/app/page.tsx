@@ -152,7 +152,13 @@ export default function HomePage() {
             <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-green-500/10 blur-3xl" />
             <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
               <div className="flex-1">
-                <div className="mb-4 text-6xl">🫙</div>
+                <div className="mb-4">
+                  <img
+                    src="https://llsrgsbzhubwexbozerg.supabase.co/storage/v1/object/public/products/gummies-in-a-jar.jpg"
+                    alt="Gummies-in-a-Jar"
+                    className="h-48 w-auto object-contain"
+                  />
+                </div>
                 <h3 className="mb-2 text-2xl font-bold">Gummies-in-a-Jar</h3>
                 <p className="mb-5 max-w-lg text-slate-400 text-sm leading-relaxed">
                   Our bestseller. Bulk gummies sold by the piece in a resealable jar. Perfect for
