@@ -31,6 +31,16 @@ export default function CataloguePage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  // selectedTier: productId -> 50 | 100 | null
+  const [selectedTier, setSelectedTier] = useState<Record<string, number | null>>({})
+
+  // Load tier selections from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("blazr_tier_selections")
+      if (saved) setSelectedTier(JSON.parse(saved))
+    } catch {}
+  }, [])
 
   useEffect(() => {
     const supabase = createClient()
@@ -49,9 +59,6 @@ export default function CataloguePage() {
           .order("sort_order"),
       ])
 
-      console.log("[CATALOGUE] Products data:", prods?.length, "products, first item:", JSON.stringify(prods?.[0]))
-      console.log("[CATALOGUE] Products error:", prodError)
-
       setProducts((prods as Product[]) || [])
       setCategories((cats as Category[]) || [])
       setLoading(false)
@@ -63,6 +70,15 @@ export default function CataloguePage() {
   const filteredProducts = activeCategory
     ? products.filter((p) => p.categories?.name === activeCategory)
     : products
+
+  function handleTierSelect(e: React.MouseEvent, productId: string, qty: number) {
+    e.stopPropagation()
+    setSelectedTier((prev) => {
+      const next = { ...prev, [productId]: qty }
+      try { localStorage.setItem("blazr_tier_selections", JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
 
   return (
     <div className="min-h-screen">
@@ -129,21 +145,57 @@ export default function CataloguePage() {
           /* Products grid */
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {filteredProducts.map((product) => (
-              <Card key={product.id} className="card-surface gold-glow-hover transition-all duration-300 hover:border-[#FAD03F]/20">
-                <CardContent className="p-6">
+              <Card
+                key={product.id}
+                className="card-surface gold-glow-hover transition-all duration-300 hover:border-[#FAD03F]/20"
+                style={{
+                  background: 'linear-gradient(145deg, #0d0d0d, #141414)',
+                  border: '1px solid rgba(255,255,255,0.05)',
+                  borderRadius: '20px',
+                }}
+              >
+                <CardContent className="p-5">
                   {product.image_url ? (
-                    <div className="mb-4 overflow-hidden rounded-xl">
-                      <img
-                        src={product.image_url}
-                        alt={product.name}
-                        className="h-40 w-full object-cover"
-                        onError={(e) => {
-                          console.log("[IMG ERROR]", product.name, "URL:", product.image_url)
-                          const img = e.target as HTMLImageElement
-                          img.style.display = 'none'
+                    /* Outer dark stage */
+                    <div
+                      className="mb-5 flex items-center justify-center overflow-hidden"
+                      style={{
+                        borderRadius: '20px',
+                        padding: '20px',
+                        background: 'radial-gradient(circle at center, rgba(255,200,0,0.06), transparent 70%), linear-gradient(145deg, #0f0f0f, #1a1a1a)',
+                        aspectRatio: '4/3',
+                      }}
+                    >
+                      {/* Inner cream photo panel — subtle studio surface, not dominant */}
+                      <div
+                        style={{
+                          background: 'linear-gradient(145deg, #e4e1db, #f2efe9)',
+                          borderRadius: '12px',
+                          padding: '12px',
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 12px 30px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.35)',
                         }}
-                      />
-                      <div className="mt-1 text-xs text-[#444] truncate">{product.image_url}</div>
+                      >
+                        <img
+                          src={product.image_url}
+                          alt={product.name}
+                          className="max-h-full max-w-full object-contain"
+                          style={{
+                            borderRadius: '8px',
+                            filter: 'drop-shadow(0 30px 35px rgba(0,0,0,0.6))',
+                            transform: 'scale(1.06)',
+                            display: 'block',
+                          }}
+                          onError={(e) => {
+                            const img = e.target as HTMLImageElement
+                            img.style.display = 'none'
+                          }}
+                        />
+                      </div>
                     </div>
                   ) : null}
 
@@ -153,7 +205,9 @@ export default function CataloguePage() {
                     </div>
                     <div>
                       <h3 className="font-semibold">{product.name}</h3>
-                      <p className="text-xs text-[#666]">{product.categories?.name}</p>
+                      {product.categories?.name !== 'Nano Gummies' && (
+                        <p className="text-xs text-[#666]">{product.categories?.name}</p>
+                      )}
                     </div>
                     {product.is_featured && (
                       <Badge className="bg-[#FAD03F]/10 text-[#FAD03F] border-[#FAD03F]/20 text-xs ml-auto">
@@ -162,24 +216,115 @@ export default function CataloguePage() {
                     )}
                   </div>
 
-                  <p className="mb-5 text-sm text-[#888] leading-relaxed line-clamp-3">
-                    {product.description}
-                  </p>
+                  {/* Short description — trim long DB descriptions */}
+                  {product.description && (
+                    <p className="mb-4 text-sm text-[#888] leading-relaxed line-clamp-2">
+                      {product.description.split('\n')[0]}
+                    </p>
+                  )}
 
-                  <div className="mb-5 flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-[#FAD03F]">
-                      R{product.wholesale_price}
-                    </span>
-                    <span className="text-sm text-[#666]">/ {product.unit}</span>
+                  {/* === NANO GUMMIES 10-PACK BLOCK === */}
+                  {product.unit === 'pack' && (
+                    <div className="mb-5 rounded-xl border border-[#FAD03F]/20 bg-[#FAD03F]/5 p-4 space-y-3">
+                      {/* Edition + MG info row */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-[#FAD03F]">
+                          ⚡ {product.name.split('—')[1]?.trim() || '10-Pack'}
+                        </span>
+                        <span className="text-xs text-[#666]">Fast-Acting Nano</span>
+                      </div>
+                      {/* Dosage */}
+                      <div className="flex gap-4 text-xs text-[#aaa]">
+                        <span>🍬 <strong className="text-white">10</strong> gummies/pack</span>
+                        <span>💊 <strong className="text-white">20MG</strong>/gummy</span>
+                        <span>📦 <strong className="text-white">200MG</strong> total</span>
+                      </div>
+                      {/* Pricing */}
+                      <div className="flex items-baseline gap-3 border-t border-[#FAD03F]/10 pt-3">
+                        <div>
+                          <span className="text-xs text-[#666]">Wholesale </span>
+                          <span className="text-xl font-bold text-[#FAD03F]">R{product.wholesale_price}</span>
+                          <span className="text-xs text-[#666]"> /pack</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-[#666]">RRP </span>
+                          <span className="text-lg font-bold text-green-400">R220</span>
+                          <span className="text-xs text-[#666]"> /pack</span>
+                        </div>
+                      </div>
+                      {/* Tags */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {['Fast-Acting', 'Nano-Infused', 'Precision-Dosed', 'Ready-to-Retail'].map(tag => (
+                          <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full border border-[#2a2a2a] bg-[#1a1a1a] text-[#888]">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mb-5 space-y-2">
+                    {/* Primary per-unit price — only for non-pack units */}
+                    {product.unit !== 'pack' && (
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-2xl font-bold text-[#FAD03F]">
+                          R{product.wholesale_price}
+                        </span>
+                        <span className="text-sm text-[#666]">/ {product.unit === 'gummy' ? 'gummy' : product.unit}</span>
+                      </div>
+                    )}
+                    {/* Bulk tiers — 50 units and 100 units */}
+                    {product.unit === 'gummy' && (
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => handleTierSelect(e, product.id, 50)}
+                          className={`flex-1 rounded-lg border px-3 py-1.5 text-xs transition-all ${
+                            selectedTier[product.id] === 50
+                              ? "border-[#FAD03F] bg-[#FAD03F] text-black font-semibold shadow-[0_0_8px_rgba(250,208,63,0.3)]"
+                              : "border-[#2a2a2a] bg-[#1f1f1f] text-[#888] hover:border-[#444]"
+                          }`}
+                        >
+                          <span className="block text-[10px] opacity-70">50 gummies</span>
+                          <span className="font-bold">R{product.wholesale_price * 50}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleTierSelect(e, product.id, 100)}
+                          className={`flex-1 rounded-lg border px-3 py-1.5 text-xs transition-all ${
+                            selectedTier[product.id] === 100
+                              ? "border-[#FAD03F] bg-[#FAD03F] text-black font-semibold shadow-[0_0_8px_rgba(250,208,63,0.3)]"
+                              : "border-[#2a2a2a] bg-[#1f1f1f] text-[#888] hover:border-[#444]"
+                          }`}
+                        >
+                          <span className="block text-[10px] opacity-70">100 gummies</span>
+                          <span className="font-bold">R{product.wholesale_price * 100}</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <div className="text-xs text-[#666]">MOQ: {product.moq} {product.unit}s</div>
-                    <Link href="/apply">
-                      <Button size="sm" className="bg-[#FAD03F] hover:bg-[#f5e07a] text-black text-xs h-8 gap-1.5">
-                        Order <ArrowRight className="h-3 w-3" />
-                      </Button>
-                    </Link>
+                    <div className="text-xs text-[#666]">MOQ: {product.moq} {product.unit === 'gummy' ? 'gummies' : product.unit + 's'}</div>
+                    {(() => {
+                      const tier = selectedTier[product.id]
+                      const isPack = product.unit === 'pack'
+                      return (
+                        <Link
+                          href={
+                            isPack
+                              ? `/apply?product=${encodeURIComponent(product.name)}&qty=1&price=${product.wholesale_price}`
+                              : tier
+                                ? `/apply?product=${encodeURIComponent(product.name)}&qty=${tier}&price=${product.wholesale_price * tier}`
+                                : "/apply"
+                          }
+                        >
+                          <Button size="sm" className="bg-[#FAD03F] hover:bg-[#f5e07a] text-black text-xs h-8 gap-1.5">
+                            Order <ArrowRight className="h-3 w-3" />
+                          </Button>
+                        </Link>
+                      )
+                    })()}
                   </div>
                 </CardContent>
               </Card>

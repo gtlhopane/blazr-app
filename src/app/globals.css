@@ -58,8 +58,10 @@ html {
 }
 
 .gold-glow-hover:hover {
-  box-shadow: 0 0 60px rgba(250, 208, 63, 0.15);
-  border-color: rgba(250, 208, 63, 0.3);
+  transform: translateY(-4px);
+  transition: all 0.25s ease;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 60px rgba(250, 208, 63, 0.12);
+  border-color: rgba(250, 208, 63, 0.25) !important;
 }
 
 .text-gradient {

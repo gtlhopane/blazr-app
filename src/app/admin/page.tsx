@@ -1,115 +1,131 @@
 "use client"
-const WHATSAPP = "27663249083"
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { LogOut, CheckCircle, XCircle, Package, Users, FileText, ShoppingCart } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { LogOut, Package, ShoppingCart, CheckCircle, XCircle, Loader2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 
+const ADMIN_PASSWORD = "blazr2024"
+const VAPE_CATEGORY_ID = "5c53f38c-4003-4971-93ae-797cf7cd0e57"
 
-interface Application {
+interface VapeOrder {
   id: string
-  contact_name: string
-  contact_email: string
-  contact_phone: string
-  intent_description: string
-  expected_volume: string
-  status: string
-  created_at: string
-  companies: { name: string; city: string }
-}
-
-interface Order {
-  id: string
-  order_number: string
   status: string
   total: number
+  notes: string | null
   created_at: string
-  customer_accounts: { buyer_name: string; buyer_email: string; companies: { name: string } }
 }
 
-interface Product {
+interface VapeProduct {
   id: string
   name: string
-  category: string
+  slug: string
+  stock_level: number
   wholesale_price: number
-  moq: number
-  is_active: boolean
-  categories: { name: string }
 }
 
 export default function AdminPage() {
-  const [applications, setApplications] = useState<Application[]>([])
-  const [orders, setOrders] = useState<Order[]>([])
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
-  const router = useRouter()
+  const [authenticated, setAuthenticated] = useState(false)
+  const [passwordInput, setPasswordInput] = useState("")
+  const [orders, setOrders] = useState<VapeOrder[]>([])
+  const [products, setProducts] = useState<VapeProduct[]>([])
+  const [loading, setLoading] = useState(false)
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
 
   useEffect(() => {
-    async function load() {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-
-      if (!user) { router.push("/login"); return }
-
-      // Admin check
-      const { data: prof } = await supabase.from("profiles").select("role").eq("id", user.id).single()
-      if (prof?.role !== "admin") {
-        toast.error("Admin access required")
-        router.push("/buyer")
-        return
+    // Check if already authenticated
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("blazr_admin_token")
+      if (stored === ADMIN_PASSWORD) {
+        setAuthenticated(true)
       }
-
-      // Load data in parallel
-      const [{ data: apps }, { data: ords }, { data: prods }] = await Promise.all([
-        supabase.from("buyer_applications").select("*, companies(name, city)").order("created_at", { ascending: false }),
-        supabase.from("orders").select("*, customer_accounts(buyer_name, buyer_email, companies(name))").order("created_at", { ascending: false }).limit(50),
-        supabase.from("products").select("*, categories(name)").eq("is_active", true),
-      ])
-
-      setApplications((apps as Application[]) || [])
-      setOrders((ords as Order[]) || [])
-      setProducts((prods as Product[]) || [])
-      setLoading(false)
     }
-    load()
-  }, [router])
+  }, [])
 
-  async function handleLogout() {
+  useEffect(() => {
+    if (authenticated) {
+      loadData()
+    }
+  }, [authenticated])
+
+  async function loadData() {
+    setLoading(true)
     const supabase = createClient()
-    supabase.auth.signOut()
-    router.push("/")
-    router.refresh()
+
+    // Load orders (all of them, filter by notes containing "Vape")
+    const { data: ords } = await supabase
+      .from("orders")
+      .select("id, status, total, notes, created_at")
+      .order("created_at", { ascending: false })
+      .limit(100)
+
+    // Load vape products
+    const { data: prods } = await supabase
+      .from("products")
+      .select("id, name, slug, stock_level, wholesale_price")
+      .eq("category_id", VAPE_CATEGORY_ID)
+      .order("name")
+
+    setOrders((ords as VapeOrder[]) || [])
+    setProducts((prods as VapeProduct[]) || [])
+    setLoading(false)
   }
 
-  async function approveApplication(id: string, email: string, name: string) {
-    const supabase = createClient()
-
-    // Update application status
-    await supabase.from("buyer_applications").update({ status: "approved", reviewed_at: new Date().toISOString() }).eq("id", id)
-
-    toast.success(`Application approved for ${name}`)
-    setApplications((prev) => prev.map((a) => a.id === id ? { ...a, status: "approved" } : a))
+  function handleLogin(e: React.FormEvent) {
+    e.preventDefault()
+    if (passwordInput === ADMIN_PASSWORD) {
+      localStorage.setItem("blazr_admin_token", ADMIN_PASSWORD)
+      setAuthenticated(true)
+      setPasswordInput("")
+    } else {
+      toast.error("Incorrect password")
+    }
   }
 
-  async function rejectApplication(id: string, name: string) {
-    const supabase = createClient()
-    await supabase.from("buyer_applications").update({ status: "rejected", reviewed_at: new Date().toISOString() }).eq("id", id)
-    toast.success(`Application rejected for ${name}`)
-    setApplications((prev) => prev.map((a) => a.id === id ? { ...a, status: "rejected" } : a))
+  function handleLogout() {
+    localStorage.removeItem("blazr_admin_token")
+    setAuthenticated(false)
+    setOrders([])
+    setProducts([])
   }
 
   async function updateOrderStatus(orderId: string, status: string) {
+    setUpdatingId(orderId)
     const supabase = createClient()
-    await supabase.from("orders").update({ status }).eq("id", orderId)
-    toast.success(`Order ${status}`)
-    setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status } : o))
+    const { error } = await supabase
+      .from("orders")
+      .update({ status })
+      .eq("id", orderId)
+
+    if (!error) {
+      setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status } : o))
+      toast.success(`Order ${status}`)
+    } else {
+      toast.error("Failed to update")
+    }
+    setUpdatingId(null)
+  }
+
+  async function updateStock(productId: string, newStock: number) {
+    const supabase = createClient()
+    const { error } = await supabase
+      .from("products")
+      .update({ stock_level: newStock })
+      .eq("id", productId)
+
+    if (!error) {
+      setProducts((prev) => prev.map((p) => p.id === productId ? { ...p, stock_level: newStock } : p))
+      toast.success("Stock updated")
+    } else {
+      toast.error("Failed to update stock")
+    }
   }
 
   const statusColors: Record<string, string> = {
@@ -123,25 +139,59 @@ export default function AdminPage() {
     draft: "bg-slate-500/10 text-slate-400 border-slate-500/20",
   }
 
-  if (loading) {
-    return <div className="flex items-center justify-center py-32 text-slate-400">Loading admin panel...</div>
+  // Parse invoice number from notes
+  function getInvoiceNumber(notes: string | null): string {
+    if (!notes) return "—"
+    const match = notes.match(/Invoice:\s*([A-Z0-9-]+)/)
+    return match ? match[1] : notes.slice(0, 20)
   }
 
-  const pendingApps = applications.filter((a) => a.status === "pending")
-  const approvedApps = applications.filter((a) => a.status === "approved")
+  if (!authenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <div className="text-4xl mb-3">🌿</div>
+            <h1 className="text-2xl font-bold">Admin Access</h1>
+            <p className="text-sm text-[#666] mt-1">Enter password to access the admin panel</p>
+          </div>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <Label className="text-xs text-[#888]">Password</Label>
+              <Input
+                type="password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                className="bg-[#111] border-[#2a2a2a] h-10 mt-1"
+                placeholder="Enter admin password"
+              />
+            </div>
+            <Button type="submit" className="w-full bg-[#FAD03F] hover:bg-[#f5e07a] text-black font-semibold">
+              Login
+            </Button>
+          </form>
+        </div>
+      </div>
+    )
+  }
+
+  const vapeOrders = orders // All orders are shown (most recent first)
 
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <section className="border-b border-slate-800/40 bg-[#0b1628]/50 py-6">
+      <section className="border-b border-[#2a2a2a] bg-[#111]/80 py-6">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Admin Panel</h1>
-            <p className="text-sm text-slate-400 mt-1">Manage applications, orders, and products</p>
+            <p className="text-sm text-[#666] mt-1">Manage vape orders and inventory</p>
           </div>
-          <Button variant="outline" onClick={handleLogout} className="border-slate-700 text-slate-400 gap-2">
-            <LogOut className="h-4 w-4" /> Logout
-          </Button>
+          <div className="flex items-center gap-3">
+            <Badge className="bg-[#FAD03F]/10 text-[#FAD03F] border-[#FAD03F]/20 text-xs">Vape Wholesale</Badge>
+            <Button variant="outline" onClick={handleLogout} className="border-[#2a2a2a] text-[#888] hover:bg-[#1a1a1a] gap-2">
+              <LogOut className="h-4 w-4" /> Logout
+            </Button>
+          </div>
         </div>
       </section>
 
@@ -149,84 +199,141 @@ export default function AdminPage() {
         {/* Stats */}
         <div className="mb-8 grid gap-4 sm:grid-cols-4">
           {[
-            { label: "Pending Applications", value: pendingApps.length, icon: Users, color: "text-yellow-400" },
-            { label: "Approved Accounts", value: approvedApps.length, icon: CheckCircle, color: "text-green-400" },
             { label: "Total Orders", value: orders.length, icon: ShoppingCart, color: "text-blue-400" },
-            { label: "Products", value: products.length, icon: Package, color: "text-purple-400" },
+            { label: "Pending", value: orders.filter((o) => o.status === "pending").length, icon: Loader2, color: "text-yellow-400" },
+            { label: "Confirmed", value: orders.filter((o) => ["confirmed", "shipped", "delivered"].includes(o.status)).length, icon: CheckCircle, color: "text-green-400" },
+            { label: "Vape Products", value: products.length, icon: Package, color: "text-purple-400" },
           ].map(({ label, value, icon: Icon, color }) => (
-            <Card key={label} className="card-surface">
+            <Card key={label} className="border-[#2a2a2a] bg-[#111]">
               <CardContent className="p-5 flex items-center gap-4">
                 <Icon className={`h-5 w-5 ${color}`} />
                 <div>
-                  <div className={`text-2xl font-bold ${color}`}>{value}</div>
-                  <p className="text-xs text-slate-500">{label}</p>
+                  <div className={`text-2xl font-bold ${color}`}>{loading ? "—" : value}</div>
+                  <p className="text-xs text-[#666]">{label}</p>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
 
-        {/* Tabs */}
-        <Tabs defaultValue="applications" className="space-y-6">
-          <TabsList className="bg-slate-900/80 border border-slate-800">
-            <TabsTrigger value="applications" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">
-              Applications ({pendingApps.length})
-            </TabsTrigger>
-            <TabsTrigger value="orders" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">
-              Orders
-            </TabsTrigger>
-            <TabsTrigger value="products" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">
-              Products
-            </TabsTrigger>
-          </TabsList>
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-[#FAD03F]" />
+          </div>
+        ) : (
+          <Tabs defaultValue="orders" className="space-y-6">
+            <TabsList className="bg-[#111] border border-[#2a2a2a]">
+              <TabsTrigger value="orders" className="data-[state=active]:bg-[#FAD03F] data-[state=active]:text-black">
+                <ShoppingCart className="h-4 w-4 mr-2" /> Orders
+              </TabsTrigger>
+              <TabsTrigger value="inventory" className="data-[state=active]:bg-[#FAD03F] data-[state=active]:text-black">
+                <Package className="h-4 w-4 mr-2" /> Inventory
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Applications */}
-          <TabsContent value="applications">
-            <Card className="card-surface">
-              <CardHeader>
-                <CardTitle className="text-lg">Buyer Applications</CardTitle>
-                <CardDescription className="text-xs">Review and approve wholesale account applications</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                {pendingApps.length === 0 ? (
-                  <div className="py-16 text-center text-sm text-slate-500">No pending applications</div>
-                ) : (
+            {/* Orders Tab */}
+            <TabsContent value="orders">
+              <Card className="border-[#2a2a2a] bg-[#111]">
+                <CardContent className="p-0">
+                  {vapeOrders.length === 0 ? (
+                    <div className="py-16 text-center text-sm text-[#666]">
+                      No orders yet. Orders will appear here when customers submit from the vapes page.
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-[#2a2a2a] hover:bg-transparent">
+                          <TableHead className="text-xs text-[#666]">Invoice</TableHead>
+                          <TableHead className="text-xs text-[#666]">Total</TableHead>
+                          <TableHead className="text-xs text-[#666]">Status</TableHead>
+                          <TableHead className="text-xs text-[#666]">Date</TableHead>
+                          <TableHead className="text-xs text-[#666]">Update Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {vapeOrders.map((order) => (
+                          <TableRow key={order.id} className="border-[#2a2a2a]">
+                            <TableCell className="font-mono text-sm text-[#FAD03F]">
+                              {getInvoiceNumber(order.notes)}
+                            </TableCell>
+                            <TableCell className="font-semibold text-white">
+                              R{(order.total || 0).toLocaleString()}
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={statusColors[order.status] || "bg-slate-700"}>
+                                {order.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-[#666]">
+                              {new Date(order.created_at).toLocaleDateString("ZA")}
+                            </TableCell>
+                            <TableCell>
+                              <select
+                                className={`h-7 rounded border px-2 text-xs font-medium bg-[#0d0d0d] ${statusColors[order.status]}`}
+                                value={order.status}
+                                onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                                disabled={updatingId === order.id}
+                              >
+                                {["draft", "pending", "quoted", "confirmed", "processing", "shipped", "delivered", "cancelled"].map((s) => (
+                                  <option key={s} value={s}>{s}</option>
+                                ))}
+                              </select>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Inventory Tab */}
+            <TabsContent value="inventory">
+              <Card className="border-[#2a2a2a] bg-[#111]">
+                <CardContent className="p-0">
                   <Table>
                     <TableHeader>
-                      <TableRow className="border-slate-800/60 hover:bg-transparent">
-                        <TableHead className="text-xs text-slate-500">Business</TableHead>
-                        <TableHead className="text-xs text-slate-500">Contact</TableHead>
-                        <TableHead className="text-xs text-slate-500">Intent</TableHead>
-                        <TableHead className="text-xs text-slate-500">Date</TableHead>
-                        <TableHead className="text-xs text-slate-500">Actions</TableHead>
+                      <TableRow className="border-[#2a2a2a] hover:bg-transparent">
+                        <TableHead className="text-xs text-[#666]">Product</TableHead>
+                        <TableHead className="text-xs text-[#666]">Price</TableHead>
+                        <TableHead className="text-xs text-[#666]">Current Stock</TableHead>
+                        <TableHead className="text-xs text-[#666]">Update Stock</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {pendingApps.map((app) => (
-                        <TableRow key={app.id} className="border-slate-800/60">
+                      {products.map((p) => (
+                        <TableRow key={p.id} className="border-[#2a2a2a]">
                           <TableCell>
-                            <div className="font-medium text-sm">{app.companies?.name}</div>
-                            <div className="text-xs text-slate-500">{app.companies?.city}</div>
+                            <div className="font-medium text-sm">{p.name}</div>
+                          </TableCell>
+                          <TableCell className="font-semibold text-green-400">
+                            R{p.wholesale_price}
                           </TableCell>
                           <TableCell>
-                            <div className="text-sm">{app.contact_name}</div>
-                            <div className="text-xs text-slate-500">{app.contact_email}</div>
-                            <div className="text-xs text-slate-600">{app.contact_phone}</div>
+                            <span className={`font-semibold ${p.stock_level > 0 ? "text-green-400" : "text-[#666]"}`}>
+                              {p.stock_level}
+                            </span>
                           </TableCell>
                           <TableCell>
-                            <div className="text-xs text-slate-400 max-w-[200px] line-clamp-2">{app.intent_description}</div>
-                            <div className="text-xs text-slate-600 mt-1">Volume: {app.expected_volume}</div>
-                          </TableCell>
-                          <TableCell className="text-xs text-slate-500">
-                            {new Date(app.created_at).toLocaleDateString("ZA")}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button size="sm" onClick={() => approveApplication(app.id, app.contact_email, app.contact_name)} className="bg-green-600 hover:bg-green-500 text-white h-7 text-xs gap-1">
-                                <CheckCircle className="h-3 w-3" /> Approve
-                              </Button>
-                              <Button size="sm" variant="outline" onClick={() => rejectApplication(app.id, app.contact_name)} className="border-red-500/30 text-red-400 hover:bg-red-500/10 h-7 text-xs gap-1">
-                                <XCircle className="h-3 w-3" /> Reject
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                min="0"
+                                defaultValue={p.stock_level}
+                                className="w-24 h-7 bg-[#0d0d0d] border-[#2a2a2a] text-sm"
+                                id={`stock-${p.id}`}
+                              />
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  const input = document.getElementById(`stock-${p.id}`) as HTMLInputElement
+                                  const val = parseInt(input?.value || "0", 10)
+                                  updateStock(p.id, val)
+                                }}
+                                className="h-7 bg-[#FAD03F] hover:bg-[#f5e07a] text-black text-xs px-3"
+                              >
+                                Save
                               </Button>
                             </div>
                           </TableCell>
@@ -234,111 +341,11 @@ export default function AdminPage() {
                       ))}
                     </TableBody>
                   </Table>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Orders */}
-          <TabsContent value="orders">
-            <Card className="card-surface">
-              <CardHeader>
-                <CardTitle className="text-lg">All Orders</CardTitle>
-                <CardDescription className="text-xs">Manage and track all wholesale orders</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                {orders.length === 0 ? (
-                  <div className="py-16 text-center text-sm text-slate-500">No orders yet</div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-slate-800/60 hover:bg-transparent">
-                        <TableHead className="text-xs text-slate-500">Order #</TableHead>
-                        <TableHead className="text-xs text-slate-500">Customer</TableHead>
-                        <TableHead className="text-xs text-slate-500">Total</TableHead>
-                        <TableHead className="text-xs text-slate-500">Status</TableHead>
-                        <TableHead className="text-xs text-slate-500">Date</TableHead>
-                        <TableHead className="text-xs text-slate-500">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {orders.map((order) => (
-                        <TableRow key={order.id} className="border-slate-800/60">
-                          <TableCell className="font-mono text-sm text-slate-300">
-                            {order.order_number || order.id.slice(0, 8)}
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm">{order.customer_accounts?.companies?.name}</div>
-                            <div className="text-xs text-slate-500">{order.customer_accounts?.buyer_email}</div>
-                          </TableCell>
-                          <TableCell className="font-semibold text-green-400">
-                            R{(order.total || 0).toLocaleString()}
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={statusColors[order.status] || "bg-slate-700"}>
-                              {order.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs text-slate-500">
-                            {new Date(order.created_at).toLocaleDateString("ZA")}
-                          </TableCell>
-                          <TableCell>
-                            <select
-                              className={`h-7 rounded border px-2 text-xs font-medium ${statusColors[order.status]}`}
-                              value={order.status}
-                              onChange={(e) => updateOrderStatus(order.id, e.target.value)}
-                            >
-                              {["draft", "pending", "quoted", "confirmed", "processing", "shipped", "delivered", "cancelled"].map((s) => (
-                                <option key={s} value={s}>{s}</option>
-                              ))}
-                            </select>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Products */}
-          <TabsContent value="products">
-            <Card className="card-surface">
-              <CardHeader>
-                <CardTitle className="text-lg">Products</CardTitle>
-                <CardDescription className="text-xs">{products.length} active products in catalogue</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-slate-800/60 hover:bg-transparent">
-                      <TableHead className="text-xs text-slate-500">Product</TableHead>
-                      <TableHead className="text-xs text-slate-500">Category</TableHead>
-                      <TableHead className="text-xs text-slate-500">Price</TableHead>
-                      <TableHead className="text-xs text-slate-500">MOQ</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {products.map((p) => (
-                      <TableRow key={p.id} className="border-slate-800/60">
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className="h-8 w-8 rounded border border-slate-800 bg-slate-900 flex items-center justify-center text-xs">📦</div>
-                            <span className="font-medium text-sm">{p.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm text-slate-400">{p.categories?.name}</TableCell>
-                        <TableCell className="font-semibold text-green-400 text-sm">R{p.wholesale_price}</TableCell>
-                        <TableCell className="text-sm text-slate-400">{p.moq}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        )}
       </div>
     </div>
   )
