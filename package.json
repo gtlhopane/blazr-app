@@ -21,7 +21,6 @@
     "tailwind-merge": "^2.5.0"
   },
   "devDependencies": {
-    "@types/google__maps": "^0.5.20",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
