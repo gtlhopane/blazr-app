@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseAdmin } from "@/lib/supabase/admin"
+import { generateInvoicePDF } from "@/lib/pdf/invoice"
 
 function generateInvoiceNumber() {
   const date = new Date()
@@ -83,6 +84,34 @@ export async function POST(req: NextRequest) {
     }))
 
     await supabase.from("order_items").insert(orderItems)
+
+    // Generate PDF invoice
+    let pdfAttachment: { filename: string; content: string } | null = null
+    try {
+      const pdfBuffer = await generateInvoicePDF({
+        invoiceNumber: invoice_number,
+        buyerName: buyer_name,
+        buyerEmail: buyer_email,
+        buyerPhone: buyer_phone,
+        buyerCompany: buyer_company,
+        deliveryAddress: delivery_address,
+        items: items.map((item: { name: string; quantity: number; unit_price: number; category?: string }) => ({
+          name: item.name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          category: item.category,
+        })),
+        total: Math.round(total_price),
+      })
+      const pdfBase64 = Buffer.from(pdfBuffer).toString("base64")
+      pdfAttachment = {
+        filename: `Invoice-${invoice_number}.pdf`,
+        content: pdfBase64,
+      }
+    } catch (pdfErr) {
+      console.error("PDF generation error:", pdfErr)
+      // Continue without PDF if generation fails
+    }
 
     // Send emails via Resend
     try {
@@ -224,34 +253,42 @@ export async function POST(req: NextRequest) {
 
       // Send buyer email
       if (buyer_email && buyer_email.includes("@")) {
+        const emailPayload: Record<string, unknown> = {
+          from: "Blazr Wholesale <blazr@wholesale.blazr.africa>",
+          to: [buyer_email],
+          subject: `Order Confirmed — ${invoice_number}`,
+          html: buyerEmailHtml,
+        }
+        if (pdfAttachment) {
+          emailPayload.attachments = [pdfAttachment]
+        }
         await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
             Authorization: "Bearer re_cnnve3Ua_M5k1mJ4hBLLWyyiMD52Yv8xL",
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            from: "Blazr Wholesale <blazr@biomuti.co.za>",
-            to: [buyer_email],
-            subject: `Order Confirmed — ${invoice_number}`,
-            html: buyerEmailHtml,
-          }),
+          body: JSON.stringify(emailPayload),
         })
       }
 
       // Send admin email
+      const adminEmailPayload: Record<string, unknown> = {
+        from: "Blazr Wholesale <blazr@wholesale.blazr.africa>",
+        to: ["gtlhopane@gmail.com"],
+        subject: `New Order ${invoice_number} — ${buyer_name} (R${total_price.toLocaleString()})`,
+        html: adminEmailHtml,
+      }
+      if (pdfAttachment) {
+        adminEmailPayload.attachments = [pdfAttachment]
+      }
       await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
           Authorization: "Bearer re_cnnve3Ua_M5k1mJ4hBLLWyyiMD52Yv8xL",
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          from: "Blazr Wholesale <blazr@biomuti.co.za>",
-          to: ["gtlhopane@gmail.com"],
-          subject: `New Order ${invoice_number} — ${buyer_name} (R${total_price.toLocaleString()})`,
-          html: adminEmailHtml,
-        }),
+        body: JSON.stringify(adminEmailPayload),
       })
     } catch (emailErr) {
       console.error("Email error:", emailErr)
