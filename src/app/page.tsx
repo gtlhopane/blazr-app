@@ -24,9 +24,9 @@ const FEATURES = [
 
 const CATEGORIES = [
   { name: "Flower", icon: "🌿", count: "Greenhouse & Indoor" },
-  { name: "Edibles", icon: "🍬", count: "Gummies, chocolates & more" },
-  { name: "Vapes", icon: "💨", count: "Disposable & cartridge pens" },
-  { name: "Concentrates", icon: "💎", count: "Rosin, hash, shatter" },
+  { name: "Edibles", icon: "🍬", count: "Nano-Emulsified Gummies & More" },
+  { name: "Vapes", icon: "💨", count: "Disposable & Cartridge Pens" },
+  { name: "Concentrates", icon: "💎", count: "Rosin, Hash, Shatter & More" },
 ]
 
 export default function HomePage() {
