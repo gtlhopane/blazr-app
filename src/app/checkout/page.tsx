@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import GooglePlacesInput from "@/components/google-places-input"
 import { CheckCircle, ArrowLeft, Copy, Check } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
 import Link from "next/link"
@@ -62,6 +63,7 @@ export default function CheckoutPage() {
       setBuyerEmail(data.user.email || "")
       setBuyerPhone(meta.phone || "")
       setBuyerCompany(meta.company || "")
+      setDeliveryAddress(meta.address || "")
       // Ensure cart is loaded from localStorage after auth
       loadCartFromSupabase(data.user.id)
       setLoading(false)
@@ -321,13 +323,11 @@ export default function CheckoutPage() {
                   <CardContent className="space-y-4">
                     <div className="space-y-1.5">
                       <Label htmlFor="address" className="text-xs text-[#888]">Full Delivery Address *</Label>
-                      <Input
-                        id="address"
+                      <GooglePlacesInput
                         value={deliveryAddress}
-                        onChange={(e) => setDeliveryAddress(e.target.value)}
-                        required
-                        placeholder="123 Main Street, Johannesburg, Gauteng, 2001"
-                        className="border-[#2a2a2a] bg-[#111] h-10"
+                        onChange={(val) => setDeliveryAddress(val)}
+                        placeholder="Start typing your address..."
+                        className="border border-[#2a2a2a] bg-[#111] rounded-lg"
                       />
                     </div>
                     <div className="space-y-1.5">
