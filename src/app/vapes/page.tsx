@@ -14,7 +14,7 @@ import { toast } from "sonner"
 const STRAIN_IMAGES: Record<string, string> = {
   "forbidden-fruit":  "https://llsrgsbzhubwexbozerg.supabase.co/storage/v1/object/public/products/vape-forbidden-fruit.jpg",
   "durban-poison":    "https://llsrgsbzhubwexbozerg.supabase.co/storage/v1/object/public/products/vape-durban-poison.jpg",
-  "sunset-sherbet":  "https://llsrgsbzhubwexbozerg.supabase.co/storage/v1/object/public/products/vape-sunset-sherbet.jpg",
+  "sunset-sherbet":  "https://llsrgsbzhubwexbozerg.supabase.co/storage/v1/object/public/products/vape-sunset-sherbet-v4.jpg",
 }
 
 const STRAIN_TYPES: Record<string, { type: string; color: string; icon: string }> = {
