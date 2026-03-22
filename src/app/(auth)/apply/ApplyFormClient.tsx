@@ -74,7 +74,10 @@ export default function ApplyFormClient() {
     const { data: authData, error: signUpError } = await supabase.auth.signUp({
       email: form.contactEmail,
       password: form.password,
-      options: { data: { full_name: form.contactName } },
+      options: {
+        data: { full_name: form.contactName },
+        emailRedirectTo: "https://blazr-app.vercel.app/callback",
+      },
     })
 
     if (signUpError || !authData.user) {
