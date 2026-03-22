@@ -569,7 +569,7 @@ function InventoryTab({
                       )}
                     </TableCell>
                     <TableCell className="font-semibold text-green-400">
-                      R{p.wholesale_price}
+                      R{p.wholesale_price / 100}
                     </TableCell>
                     <TableCell>
                       <span className={`font-semibold ${p.stock_level > 0 ? "text-green-400" : "text-red-400"}`}>

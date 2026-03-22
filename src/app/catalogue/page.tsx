@@ -243,7 +243,7 @@ export default function CataloguePage() {
                       <div className="flex items-baseline gap-3 border-t border-[#FAD03F]/10 pt-3">
                         <div>
                           <span className="text-xs text-[#666]">Wholesale </span>
-                          <span className="text-xl font-bold text-[#FAD03F]">R{product.wholesale_price}</span>
+                          <span className="text-xl font-bold text-[#FAD03F]">R{product.wholesale_price / 100}</span>
                           <span className="text-xs text-[#666]"> /pack</span>
                         </div>
                         <div>
@@ -268,7 +268,7 @@ export default function CataloguePage() {
                     {product.unit !== 'pack' && (
                       <div className="flex items-baseline gap-2">
                         <span className="text-2xl font-bold text-[#FAD03F]">
-                          R{product.wholesale_price}
+                          R{product.wholesale_price / 100}
                         </span>
                         <span className="text-sm text-[#666]">/ {product.unit === 'gummy' ? 'gummy' : product.unit}</span>
                       </div>
@@ -286,7 +286,7 @@ export default function CataloguePage() {
                           }`}
                         >
                           <span className="block text-[10px] opacity-70">50 gummies</span>
-                          <span className="font-bold">R{product.wholesale_price * 50}</span>
+                          <span className="font-bold">R{product.wholesale_price * 50 / 100}</span>
                         </button>
                         <button
                           type="button"
@@ -298,7 +298,7 @@ export default function CataloguePage() {
                           }`}
                         >
                           <span className="block text-[10px] opacity-70">100 gummies</span>
-                          <span className="font-bold">R{product.wholesale_price * 100}</span>
+                          <span className="font-bold">R{product.wholesale_price * 100 / 100}</span>
                         </button>
                       </div>
                     )}

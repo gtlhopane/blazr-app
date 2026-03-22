@@ -156,7 +156,7 @@ export default function ApplyFormClient() {
           <div className="mb-6 rounded-xl border border-[#FAD03F]/30 bg-[#FAD03F]/5 p-4">
             <p className="text-xs font-medium text-[#FAD03F] mb-1">Order Selection</p>
             <p className="text-sm text-slate-200 font-semibold">{prefillQty} × {decodeURIComponent(prefillProduct)}</p>
-            <p className="text-xs text-slate-400 mt-0.5">Total: R{prefillPrice}</p>
+            <p className="text-xs text-slate-400 mt-0.5">Total: R{Number(prefillPrice) / 100}</p>
           </div>
         )}
 
