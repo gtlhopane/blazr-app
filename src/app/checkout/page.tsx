@@ -32,7 +32,7 @@ interface OrderSuccess {
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const { cartItems, cartTotal, clearCart } = useCart()
+  const { cartItems, cartTotal, clearCart, loadCartFromSupabase } = useCart()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [placing, setPlacing] = useState(false)
@@ -62,6 +62,8 @@ export default function CheckoutPage() {
       setBuyerEmail(data.user.email || "")
       setBuyerPhone(meta.phone || "")
       setBuyerCompany(meta.company || "")
+      // Ensure cart is loaded from localStorage after auth
+      loadCartFromSupabase(data.user.id)
       setLoading(false)
     })
   }, [router])
