@@ -1,0 +1,612 @@
+"use client"
+
+import { useState, useEffect, useMemo } from "react"
+import Link from "next/link"
+import { ArrowRight, Minus, Plus, Check, X, Loader2, ShoppingCart } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { createClient } from "@/lib/supabase/client"
+import { toast } from "sonner"
+
+const CONCENTRATES_CATEGORY_ID = "2e427b8c-f893-45fc-a449-cdf4f853f0be"
+const UNIT_PRICE = 250 // R250 per unit
+const BASE_MOQ = 10    // must order in multiples of 10
+
+const PRODUCT_ICONS: Record<string, string> = {
+  "live-resin":   "💎",
+  "bubble-hash":  "🫧",
+  "cured-rosin":  "🍯",
+  "hash":         "🧱",
+  "honeycomb":    "🍯",
+  "kief":         "✨",
+  "shatter":      "💠",
+}
+
+interface ConcentrateProduct {
+  id: string
+  name: string
+  slug: string
+  description: string | null
+  wholesale_price: number
+  image_url: string | null
+  is_featured: boolean
+  is_active: boolean
+}
+
+interface CartItem {
+  product: ConcentrateProduct
+  multiplier: number // each multiplier = +10 units
+}
+
+export default function ConcentratesPage() {
+  const [products, setProducts] = useState<ConcentrateProduct[]>([])
+  const [loading, setLoading] = useState(true)
+  // multiplier map: slug → multiplier (1 = 10 units, 2 = 20 units, etc.)
+  const [multipliers, setMultipliers] = useState<Record<string, number>>({})
+  const [showOrderForm, setShowOrderForm] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [orderSuccess, setOrderSuccess] = useState<{ invoice_number: string } | null>(null)
+
+  const [buyerForm, setBuyerForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    company: "",
+  })
+
+  useEffect(() => {
+    async function fetchProducts() {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from("products")
+        .select("id, name, slug, description, wholesale_price, image_url, is_featured, is_active")
+        .eq("category_id", CONCENTRATES_CATEGORY_ID)
+        .eq("is_active", true)
+        .order("name")
+
+      if (!error && data) {
+        setProducts(data)
+        const initial: Record<string, number> = {}
+        data.forEach((p: ConcentrateProduct) => { initial[p.slug] = 0 })
+        setMultipliers(initial)
+      } else {
+        toast.error("Failed to load concentrates")
+      }
+      setLoading(false)
+    }
+    fetchProducts()
+  }, [])
+
+  const selectedItems = useMemo((): CartItem[] => {
+    return products
+      .filter((p) => multipliers[p.slug] > 0)
+      .map((p) => ({ product: p, multiplier: multipliers[p.slug] }))
+  }, [products, multipliers])
+
+  // Total units = sum of (multiplier × 10) for each selected product
+  const totalUnits = Object.entries(multipliers).reduce((acc, [slug, mult]) => {
+    return acc + mult * BASE_MOQ
+  }, 0)
+  const totalPrice = totalUnits * UNIT_PRICE
+  const moqMet = totalUnits >= BASE_MOQ
+
+  function updateMultiplier(slug: string, delta: number) {
+    setMultipliers((prev) => ({
+      ...prev,
+      [slug]: Math.max(0, (prev[slug] || 0) + delta),
+    }))
+  }
+
+  function buildApplyUrl() {
+    const params = new URLSearchParams({
+      product: "Concentrates",
+      qty: String(totalUnits),
+      price: String(totalPrice),
+    })
+    selectedItems.forEach((item) => {
+      params.append("items", `${item.product.name}:${item.multiplier * BASE_MOQ}`)
+    })
+    return `/apply?${params.toString()}`
+  }
+
+  async function handleOrderSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!moqMet || selectedItems.length === 0) return
+
+    setSubmitting(true)
+    try {
+      const res = await fetch("/api/order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category: "concentrates",
+          buyer_name: buyerForm.name,
+          buyer_email: buyerForm.email,
+          buyer_phone: buyerForm.phone,
+          buyer_company: buyerForm.company,
+          items: selectedItems.map((item) => ({
+            strain_id: item.product.slug,
+            strain_name: item.product.name,
+            product_id: item.product.id,
+            quantity: item.multiplier * BASE_MOQ,
+            unit_price: UNIT_PRICE * 100, // cents
+          })),
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Order failed")
+
+      setOrderSuccess({ invoice_number: data.invoice_number })
+      toast.success("Order submitted! We'll contact you shortly.")
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Something went wrong"
+      toast.error(message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (orderSuccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="max-w-md w-full text-center space-y-6">
+          <div className="mx-auto w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center">
+            <Check className="h-8 w-8 text-green-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold mb-2">Order Received!</h1>
+            <p className="text-[#888] text-sm">
+              Thank you for your order. We&apos;ll review and contact you within 24 hours.
+            </p>
+          </div>
+          <div className="rounded-xl border border-[#2a2a2a] bg-[#111] p-5 text-left space-y-3">
+            <div>
+              <p className="text-xs text-[#666] mb-1">Invoice Number</p>
+              <p className="font-mono font-semibold text-[#FAD03F]">{orderSuccess.invoice_number}</p>
+            </div>
+            <div>
+              <p className="text-xs text-[#666] mb-1">Order Total</p>
+              <p className="font-bold text-lg">R{totalPrice.toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-xs text-[#666] mb-1">Units</p>
+              <p className="font-medium">{totalUnits} units</p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            <a
+              href={`https://wa.me/27663249083?text=Hi, I just placed order ${orderSuccess.invoice_number} on the Blazr wholesale portal.`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block"
+            >
+              <Button className="w-full bg-green-600 hover:bg-green-500 gap-2">
+                <ShoppingCart className="h-4 w-4" /> Message on WhatsApp
+              </Button>
+            </a>
+            <Button
+              variant="outline"
+              className="w-full border-[#2a2a2a] text-[#888] hover:bg-[#1a1a1a]"
+              onClick={() => {
+                setOrderSuccess(null)
+                setShowOrderForm(false)
+                setMultipliers((prev) => {
+                  const n: Record<string, number> = {}
+                  Object.keys(prev).forEach((k) => { n[k] = 0 })
+                  return n
+                })
+              }}
+            >
+              Place Another Order
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[#FAD03F]" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen">
+      {/* Hero */}
+      <section className="border-b border-[#2a2a2a] bg-gradient-to-b from-[#111]/80 to-transparent py-16">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="max-w-xl">
+            <Badge className="mb-4 bg-[#FAD03F]/10 text-[#FAD03F] border-[#FAD03F]/20 text-xs">Concentrates</Badge>
+            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl mb-4">
+              Blazr Concentrates
+            </h1>
+            <p className="text-[#888] text-sm leading-relaxed max-w-lg">
+              Premium cannabis concentrates — Live Resin, Bubble Hash, Rosin, Shatter, and more.
+              High-potency extracts · R250/unit · Mix &amp; match products · MOQ: 10 units
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="grid gap-10 lg:grid-cols-3">
+
+          {/* LEFT — Product Grid */}
+          <div className="lg:col-span-2 space-y-6">
+            <div>
+              <h2 className="text-lg font-semibold">Select Products</h2>
+              <p className="text-xs text-[#666] mt-0.5">Mix and match — minimum 10 units total (ordered in multiples of 10)</p>
+            </div>
+
+            {/* Product cards */}
+            <div className="grid gap-4 sm:grid-cols-1">
+              {products.map((product) => {
+                const mult = multipliers[product.slug] || 0
+                const qty = mult * BASE_MOQ // actual unit count
+                const isSelected = mult > 0
+                const icon = PRODUCT_ICONS[product.slug] || "💎"
+
+                return (
+                  <Card
+                    key={product.slug}
+                    className="transition-all duration-200"
+                    style={{
+                      background: isSelected
+                        ? "linear-gradient(145deg, #0d0d0d, #141414)"
+                        : "linear-gradient(145deg, #111, #161616)",
+                      border: isSelected
+                        ? "1px solid rgba(250,208,63,0.3)"
+                        : "1px solid rgba(255,255,255,0.05)",
+                      borderRadius: "16px",
+                    }}
+                  >
+                    <CardContent className="p-5">
+                      <div className="flex items-start gap-4">
+                        {/* Product image or icon */}
+                        <div
+                          className="flex-shrink-0 flex items-center justify-center rounded-xl overflow-hidden w-14 h-14"
+                          style={{
+                            background: isSelected
+                              ? "rgba(250,208,63,0.1)"
+                              : "rgba(255,255,255,0.04)",
+                            border: isSelected
+                              ? "1px solid rgba(250,208,63,0.2)"
+                              : "1px solid rgba(255,255,255,0.06)",
+                          }}
+                        >
+                          {product.image_url ? (
+                            <img
+                              src={product.image_url}
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const img = e.target as HTMLImageElement
+                                img.style.display = "none"
+                              }}
+                            />
+                          ) : (
+                            <span className="text-3xl">{icon}</span>
+                          )}
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <h3 className="font-semibold text-sm">{product.name}</h3>
+                            {isSelected && (
+                              <Check className="h-3.5 w-3.5 text-[#FAD03F] flex-shrink-0" />
+                            )}
+                          </div>
+                          <p className="text-xs text-[#666]">
+                            {product.description || "Premium cannabis concentrate"}
+                          </p>
+                          <p className="text-xs text-[#FAD03F] mt-1 font-medium">
+                            R{UNIT_PRICE}/unit · MOQ: {BASE_MOQ} units
+                          </p>
+                        </div>
+
+                        {/* Multiplier stepper — each step = +10 units */}
+                        <div className="flex-shrink-0 flex flex-col items-center gap-1.5">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => updateMultiplier(product.slug, -1)}
+                              disabled={mult === 0}
+                              className="flex items-center justify-center w-8 h-8 rounded-lg border border-[#2a2a2a] text-[#888] hover:border-[#444] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                            >
+                              <Minus className="h-3.5 w-3.5" />
+                            </button>
+                            <span
+                              className="w-8 text-center font-bold text-sm"
+                              style={{ color: mult > 0 ? "#FAD03F" : "#666" }}
+                            >
+                              {mult}
+                            </span>
+                            <button
+                              onClick={() => updateMultiplier(product.slug, 1)}
+                              className="flex items-center justify-center w-8 h-8 rounded-lg border border-[#2a2a2a] text-[#888] hover:border-[#FAD03F]/50 hover:text-[#FAD03F] transition-all"
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          <p className="text-[10px] text-[#555]">×{BASE_MOQ} units</p>
+                        </div>
+                      </div>
+
+                      {/* Breakdown when selected */}
+                      {isSelected && (
+                        <div className="mt-3 pt-3 border-t border-[#2a2a2a] flex justify-end">
+                          <span className="text-xs text-[#888]">
+                            <span className="text-[#FAD03F] font-semibold">{mult}×</span> {BASE_MOQ} units ={" "}
+                            <span className="text-white font-semibold">
+                              {qty} units × R{UNIT_PRICE} = R{(qty * UNIT_PRICE).toLocaleString()}
+                            </span>
+                          </span>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* RIGHT — Order Summary */}
+          <div className="lg:col-span-1">
+            <div
+              className="sticky top-8 rounded-2xl border p-6 space-y-5"
+              style={{
+                background: "linear-gradient(145deg, #0d0d0d, #141414)",
+                border: moqMet ? "1px solid rgba(250,208,63,0.3)" : "1px solid rgba(255,255,255,0.06)",
+                boxShadow: moqMet ? "0 0 40px rgba(250,208,63,0.08)" : "none",
+              }}
+            >
+              <div>
+                <h3 className="font-semibold text-sm mb-1">Order Summary</h3>
+                <p className="text-xs text-[#666]">Blazr Concentrates</p>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-[#888]">Total Units</span>
+                  <span
+                    className="font-bold"
+                    style={{ color: moqMet ? "#FAD03F" : "#666" }}
+                  >
+                    {totalUnits} <span className="text-[#666] font-normal">/ {BASE_MOQ} min</span>
+                  </span>
+                </div>
+                <div className="h-1.5 rounded-full bg-[#1a1a1a] overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{
+                      width: `${Math.min(100, (totalUnits / BASE_MOQ) * 100)}%`,
+                      background: moqMet
+                        ? "linear-gradient(90deg, #FAD03F, #f5e07a)"
+                        : "#333",
+                    }}
+                  />
+                </div>
+                {totalUnits < BASE_MOQ && (
+                  <p className="text-[10px] text-[#666] text-right">
+                    {BASE_MOQ - totalUnits} more units needed
+                  </p>
+                )}
+                {moqMet && (
+                  <p className="text-[10px] text-[#FAD03F] font-medium text-right">
+                    ✓ MOQ reached — ready to order
+                  </p>
+                )}
+              </div>
+
+              {selectedItems.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-[#666]">Product Mix</p>
+                  {selectedItems.map((item) => (
+                    <div key={item.product.slug} className="flex justify-between text-xs">
+                      <span className="text-[#888]">
+                        {PRODUCT_ICONS[item.product.slug] || "💎"} {item.product.name}
+                      </span>
+                      <span className="text-white font-medium">
+                        {item.multiplier * BASE_MOQ} units
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="border-t border-[#2a2a2a] pt-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-[#888]">Wholesale</span>
+                  <span className="font-bold text-white">R{totalPrice.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-[#666]">Per unit</span>
+                  <span className="text-[#888]">R{UNIT_PRICE}</span>
+                </div>
+              </div>
+
+              {!showOrderForm ? (
+                <Button
+                  disabled={!moqMet}
+                  onClick={() => setShowOrderForm(true)}
+                  className={`w-full gap-2 font-semibold h-11 text-sm transition-all ${
+                    moqMet
+                      ? "bg-[#FAD03F] hover:bg-[#f5e07a] text-black shadow-[0_0_20px_rgba(250,208,63,0.25)]"
+                      : "bg-[#1a1a1a] text-[#555] cursor-not-allowed border border-[#2a2a2a]"
+                  }`}
+                >
+                  {moqMet ? (
+                    <>Order {totalUnits} Units <ArrowRight className="h-4 w-4" /></>
+                  ) : (
+                    <>Select {BASE_MOQ} units to continue</>
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowOrderForm(false)}
+                  className="w-full gap-2 text-xs border-[#2a2a2a] text-[#666] hover:bg-[#1a1a1a]"
+                >
+                  <X className="h-3 w-3" /> Cancel
+                </Button>
+              )}
+
+              <Link href={buildApplyUrl()} className="block">
+                <Button
+                  variant="outline"
+                  className="w-full gap-2 text-xs border-[#2a2a2a] text-[#888] hover:bg-[#1a1a1a] hover:text-white"
+                >
+                  Apply for Account Instead
+                </Button>
+              </Link>
+
+              <p className="text-[10px] text-[#555] text-center">
+                Wholesale pricing. MOQ: 10 units. Ordered in multiples of 10.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Order Form */}
+        {showOrderForm && moqMet && (
+          <div className="lg:hidden mt-4">
+            <form onSubmit={handleOrderSubmit} className="rounded-2xl border border-[#FAD03F]/30 bg-[#111] p-5 space-y-4">
+              <h3 className="font-semibold text-sm">Complete Your Order</h3>
+              <div className="space-y-3">
+                {[
+                  { key: "name", label: "Full Name", placeholder: "Jane Smith", type: "text" },
+                  { key: "email", label: "Email", placeholder: "jane@business.co.za", type: "email" },
+                  { key: "phone", label: "Phone / WhatsApp", placeholder: "+27 61 234 5678", type: "tel" },
+                  { key: "company", label: "Company / Business Name", placeholder: "Green Leaf Dispensary", type: "text" },
+                ].map(({ key, label, placeholder, type }) => (
+                  <div key={key}>
+                    <Label className="text-xs text-[#888]">{label}</Label>
+                    <Input
+                      required={key !== "company"}
+                      type={type}
+                      value={buyerForm[key as keyof typeof buyerForm]}
+                      onChange={(e) => setBuyerForm((f) => ({ ...f, [key]: e.target.value }))}
+                      placeholder={placeholder}
+                      className="bg-[#0d0d0d] border-[#2a2a2a] h-9 text-sm mt-1"
+                    />
+                  </div>
+                ))}
+              </div>
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="w-full bg-[#FAD03F] hover:bg-[#f5e07a] text-black font-semibold gap-2"
+              >
+                {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Processing...</> : <><ShoppingCart className="h-4 w-4" /> Submit Order — R{totalPrice.toLocaleString()}</>}
+              </Button>
+            </form>
+          </div>
+        )}
+
+        {/* Desktop Order Form Modal */}
+        {showOrderForm && moqMet && (
+          <div className="hidden lg:flex fixed inset-0 z-50 bg-black/60 backdrop-blur-sm items-center justify-center p-4">
+            <div className="w-full max-w-md rounded-2xl border border-[#FAD03F]/30 bg-[#111] p-6 space-y-5">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-base">Complete Your Order</h3>
+                <button onClick={() => setShowOrderForm(false)} className="text-[#666] hover:text-white">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="rounded-lg bg-[#0d0d0d] border border-[#2a2a2a] p-3 space-y-1">
+                <div className="flex justify-between text-xs">
+                  <span className="text-[#666]">Total</span>
+                  <span className="font-bold text-[#FAD03F]">R{totalPrice.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-[#666]">Units</span>
+                  <span className="text-white">{totalUnits}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-[#666]">Products</span>
+                  <span className="text-white">{selectedItems.length}</span>
+                </div>
+              </div>
+              <form onSubmit={handleOrderSubmit} className="space-y-4">
+                {[
+                  { key: "name", label: "Full Name *", placeholder: "Jane Smith", type: "text" },
+                  { key: "email", label: "Email *", placeholder: "jane@business.co.za", type: "email" },
+                  { key: "phone", label: "Phone / WhatsApp *", placeholder: "+27 61 234 5678", type: "tel" },
+                  { key: "company", label: "Company / Business Name", placeholder: "Green Leaf Dispensary", type: "text" },
+                ].map(({ key, label, placeholder, type }) => (
+                  <div key={key}>
+                    <Label className="text-xs text-[#888]">{label}</Label>
+                    <Input
+                      required={key !== "company"}
+                      type={type}
+                      value={buyerForm[key as keyof typeof buyerForm]}
+                      onChange={(e) => setBuyerForm((f) => ({ ...f, [key]: e.target.value }))}
+                      placeholder={placeholder}
+                      className="bg-[#0d0d0d] border-[#2a2a2a] h-9 text-sm mt-1"
+                    />
+                  </div>
+                ))}
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full bg-[#FAD03F] hover:bg-[#f5e07a] text-black font-semibold gap-2"
+                >
+                  {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Processing...</> : <><ShoppingCart className="h-4 w-4" /> Submit Order — R{totalPrice.toLocaleString()}</>}
+                </Button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Product info cards */}
+        <div className="mt-16 grid gap-6 sm:grid-cols-3">
+          {[
+            { icon: "💎", title: "Multiple Formats", desc: "Live Resin, Rosin, Hash, Shatter, Kief, Bubble Hash & Honeycomb" },
+            { icon: "🧪", title: "Lab Tested", desc: "All concentrates are lab tested for potency and purity" },
+            { icon: "📦", title: "Mix & Match", desc: "Combine products in one order. MOQ: 10 units across any mix." },
+          ].map(({ icon, title, desc }) => (
+            <div
+              key={title}
+              className="rounded-2xl border border-[#2a2a2a] p-5"
+              style={{ background: "linear-gradient(145deg, #0d0d0d, #111)" }}
+            >
+              <div className="text-2xl mb-2">{icon}</div>
+              <h4 className="font-semibold text-sm mb-1">{title}</h4>
+              <p className="text-xs text-[#666] leading-relaxed">{desc}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <div className="mt-12 rounded-2xl border border-[#2a2a2a]/60 bg-[#111]/50 p-8 text-center">
+          <h3 className="mb-2 text-xl font-bold">Ready to apply for a wholesale account?</h3>
+          <p className="mb-5 text-sm text-[#888] max-w-md mx-auto">
+            Create your account to access concentrate pricing, place orders, and manage your wholesale orders.
+          </p>
+          <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Link href={buildApplyUrl()}>
+              <Button
+                disabled={!moqMet}
+                className={`gap-2 font-semibold ${moqMet ? "bg-[#FAD03F] hover:bg-[#f5e07a] text-black" : "bg-[#1a1a1a] text-[#555] cursor-not-allowed border border-[#2a2a2a]"}`}
+              >
+                Apply for Account <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+            <a href="https://wa.me/27663249083" target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" className="border-[#2a2a2a] text-[#888] hover:bg-[#1a1a1a] hover:text-white">
+                Chat on WhatsApp
+              </Button>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

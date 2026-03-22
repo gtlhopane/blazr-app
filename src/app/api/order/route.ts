@@ -17,6 +17,12 @@ export const PRODUCT_CATEGORIES = {
     slug: "vapes",
     categoryId: "5c53f38c-4003-4971-93ae-797cf7cd0e57",
   },
+  concentrates: {
+    label: "Concentrates",
+    icon: "💎",
+    slug: "concentrates",
+    categoryId: "2e427b8c-f893-45fc-a449-cdf4f853f0be",
+  },
   // Future categories can be added here:
   // edibles: { label: "Edibles", icon: "🍬", slug: "edibles", categoryId: "..." },
   // flower: { label: "Flower", icon: "🌿", slug: "flower", categoryId: "..." },

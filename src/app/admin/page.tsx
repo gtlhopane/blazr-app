@@ -26,6 +26,16 @@ export const CATEGORIES = {
     primaryField: "strain",   // What to call individual items (strain, flavor, product...)
     unitLabel: "units",
   },
+  concentrates: {
+    key: "concentrates",
+    label: "Concentrates",
+    icon: "💎",
+    emoji: "💎",
+    description: "Premium cannabis concentrates & extracts",
+    categoryId: "2e427b8c-f893-45fc-a449-cdf4f853f0be",
+    primaryField: "product",
+    unitLabel: "units",
+  },
   // Future categories — uncomment and configure when ready:
   // edibles: {
   //   key: "edibles",
@@ -91,6 +101,7 @@ function getInvoiceNumber(notes: string | null): string {
 function getCategoryFromNotes(notes: string | null): string {
   if (!notes) return "vapes"
   if (notes.includes("Vape")) return "vapes"
+  if (notes.includes("Concentrate")) return "concentrates"
   if (notes.includes("Edible")) return "edibles"
   if (notes.includes("Flower")) return "flower"
   if (notes.includes("Oil")) return "oils"
