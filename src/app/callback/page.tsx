@@ -10,9 +10,8 @@ export default function CallbackPage() {
   const supabase = createClient()
 
   useEffect(() => {
-    // Supabase handles the token exchange from the URL hash
-    // This runs automatically and sets the session cookie
-    supabase.auth.getUser().then(({ user, error }) => {
+    supabase.auth.getUser().then((result) => {
+      const { data: { user }, error } = result
       if (error) {
         toast.error("Email confirmation failed: " + error.message)
         router.push("/login")
@@ -20,10 +19,7 @@ export default function CallbackPage() {
         toast.success("Email confirmed! You're now logged in.")
         router.push("/checkout")
       } else {
-        // No user yet — wait a moment for session to be established
-        setTimeout(() => {
-          router.push("/checkout")
-        }, 1500)
+        setTimeout(() => router.push("/checkout"), 1500)
       }
     })
   }, [router, supabase])
@@ -33,7 +29,7 @@ export default function CallbackPage() {
       <div className="text-center">
         <div className="mb-4 text-3xl">✅</div>
         <h2 className="text-xl font-bold text-white mb-2">Confirming your email...</h2>
-        <p className="text-slate-400 text-sm">You'll be redirected shortly.</p>
+        <p className="text-slate-400 text-sm">You&apos;ll be redirected shortly.</p>
       </div>
     </div>
   )
