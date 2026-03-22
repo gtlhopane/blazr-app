@@ -17,10 +17,11 @@ function formatPrice(amount: number): string {
 }
 
 const BANK_DETAILS = {
-  accountName: "Blazr Wholesale",
-  bank: "FNB",
-  accountNumber: "1234567890",
-  branch: "250655",
+  accountName: "Blazr (Pty) Ltd",
+  bank: "Nedbank",
+  accountNumber: "1338261843",
+  branch: "198765",
+  swift: "NEDSZAJJ",
   email: "orders@wholesale.blazr.africa",
 }
 
@@ -186,8 +187,12 @@ export default function CheckoutPage() {
                 <span className="font-mono font-medium text-white">{BANK_DETAILS.accountNumber}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#737373]">Branch</span>
+                <span className="text-[#737373]">Branch Code</span>
                 <span className="font-mono font-medium text-white">{BANK_DETAILS.branch}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#737373]">SWIFT Code</span>
+                <span className="font-mono font-medium text-white">{BANK_DETAILS.swift}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-[#737373]">Reference</span>

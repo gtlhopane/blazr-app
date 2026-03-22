@@ -97,10 +97,11 @@ export async function POST(req: NextRequest) {
         <div style="background: rgba(250,208,63,0.08); border: 1px solid rgba(250,208,63,0.25); border-radius: 12px; padding: 20px; margin: 20px 0;">
           <h3 style="color: #FAD03F; font-size: 14px; margin: 0 0 12px; text-transform: uppercase; letter-spacing: 1px;">Bank Transfer Details</h3>
           <table style="width: 100%; font-size: 14px;">
-            <tr><td style="color: #888; padding: 4px 0;">Account Name</td><td style="text-align: right; color: #fff;">Blazr Wholesale</td></tr>
-            <tr><td style="color: #888; padding: 4px 0;">Bank</td><td style="text-align: right; color: #fff;">FNB</td></tr>
-            <tr><td style="color: #888; padding: 4px 0;">Account Number</td><td style="text-align: right; color: #fff; font-family: monospace;">1234567890</td></tr>
-            <tr><td style="color: #888; padding: 4px 0;">Branch</td><td style="text-align: right; color: #fff; font-family: monospace;">250655</td></tr>
+            <tr><td style="color: #888; padding: 4px 0;">Account Name</td><td style="text-align: right; color: #fff;">Blazr (Pty) Ltd</td></tr>
+            <tr><td style="color: #888; padding: 4px 0;">Bank</td><td style="text-align: right; color: #fff;">Nedbank</td></tr>
+            <tr><td style="color: #888; padding: 4px 0;">Account Number</td><td style="text-align: right; color: #fff; font-family: monospace;">1338261843</td></tr>
+            <tr><td style="color: #888; padding: 4px 0;">Branch Code</td><td style="text-align: right; color: #fff; font-family: monospace;">198765</td></tr>
+            <tr><td style="color: #888; padding: 4px 0;">SWIFT Code</td><td style="text-align: right; color: #fff; font-family: monospace;">NEDSZAJJ</td></tr>
             <tr><td style="color: #888; padding: 4px 0;">Reference</td><td style="text-align: right; color: #FAD03F; font-weight: bold; font-family: monospace;">${invoice_number}</td></tr>
           </table>
           <p style="margin: 12px 0 0; font-size: 12px; color: #888;">
