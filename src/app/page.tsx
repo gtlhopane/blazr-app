@@ -154,7 +154,7 @@ export default function HomePage() {
               <div className="flex-1">
                 <div className="mb-4">
                   <img
-                    src="https://llsrgsbzhubwexbozerg.supabase.co/storage/v1/object/public/products/gummies-in-a-jar.jpg"
+                    src="https://llsrgsbzhubwexbozerg.supabase.co/storage/v1/object/public/products/gummies-in-a-jar.png"
                     alt="Gummies-in-a-Jar"
                     className="h-48 w-auto object-contain"
                   />
