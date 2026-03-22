@@ -227,7 +227,7 @@ export async function POST(req: NextRequest) {
         await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
-            Authorization: "Bearer re_jJ1LjCLJ8QzQdELBqPZ4y1N8BmWdZ8YJ3p",
+            Authorization: "Bearer re_cnnve3Ua_M5k1mJ4hBLLWyyiMD52Yv8xL",
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -243,7 +243,7 @@ export async function POST(req: NextRequest) {
       await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
-          Authorization: "Bearer re_jJ1LjCLJ8QzQdELBqPZ4y1N8BmWdZ8YJ3p",
+          Authorization: "Bearer re_cnnve3Ua_M5k1mJ4hBLLWyyiMD52Yv8xL",
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
