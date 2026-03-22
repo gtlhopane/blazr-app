@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -30,7 +31,17 @@ export default function CataloguePage() {
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const [activeCategory, setActiveCategory] = useState<string | null>(
+    // Initialize from URL param (e.g. ?category=Flower from homepage tiles)
+    () => {
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search)
+        const cat = params.get("category")
+        return cat || null
+      }
+      return null
+    }
+  )
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null)
   // selectedTier: productId -> 50 | 100 | null
   const [selectedTier, setSelectedTier] = useState<Record<string, number | null>>({})
@@ -109,7 +120,7 @@ export default function CataloguePage() {
         <div className="mb-10 flex flex-wrap gap-2">
           <Badge
             variant="outline"
-            onClick={() => setActiveCategory(null)}
+            onClick={() => { setActiveCategory(null); setActiveSubcategory(null); window.history.replaceState(null, '', '/catalogue'); }}
             className={`cursor-pointer transition-colors ${
               activeCategory === null
                 ? "bg-[#FAD03F]/10 border-[#FAD03F] text-[#FAD03F]"
@@ -122,7 +133,7 @@ export default function CataloguePage() {
             <Badge
               key={cat.id}
               variant="outline"
-              onClick={() => { setActiveCategory(cat.name); setActiveSubcategory(null); }}
+              onClick={() => { setActiveCategory(cat.name); setActiveSubcategory(null); window.history.replaceState(null, '', `/catalogue?category=${encodeURIComponent(cat.name)}`); }}
               className={`cursor-pointer transition-colors ${
                 activeCategory === cat.name
                   ? "bg-[#FAD03F]/10 border-[#FAD03F] text-[#FAD03F]"
@@ -140,7 +151,14 @@ export default function CataloguePage() {
             {['All', 'Indoor', 'Greenhouse'].map((sub) => (
               <button
                 key={sub}
-                onClick={() => setActiveSubcategory(sub === 'All' ? null : sub)}
+                onClick={() => {
+                  const newSub = sub === 'All' ? null : sub
+                  setActiveSubcategory(newSub)
+                  const url = newSub
+                    ? `/catalogue?category=Flower&subcategory=${encodeURIComponent(newSub)}`
+                    : `/catalogue?category=Flower`
+                  window.history.replaceState(null, '', url)
+                }}
                 className={`text-xs px-4 py-1.5 rounded-full border transition-colors ${
                   (sub === 'All' && !activeSubcategory) || activeSubcategory === sub
                     ? 'border-[#FAD03F] bg-[#FAD03F]/10 text-[#FAD03F]'

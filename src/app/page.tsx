@@ -56,12 +56,12 @@ export default function HomePage() {
             </p>
 
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Link href="/apply">
+              <a href="#shop">
                 <Button size="lg" className="bg-green-600 hover:bg-green-500 text-white text-base px-8 h-12 font-semibold gap-2">
-                  Apply for Account
+                  Shop
                   <ArrowRight className="h-4 w-4" />
                 </Button>
-              </Link>
+              </a>
               <Link href="/catalogue">
                 <Button size="lg" variant="outline" className="text-base px-8 h-12 border-slate-700 text-slate-300 hover:bg-slate-900/50 hover:text-white">
                   Browse Catalogue
@@ -81,20 +81,23 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Categories */}
-      <section className="border-y border-slate-800/40 bg-[#0b1628]/50 py-16">
+      {/* Shop by Category */}
+      <section id="shop" className="border-y border-slate-800/40 bg-[#0b1628]/50 py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <h2 className="text-2xl font-bold text-white mb-8 text-center">Shop by Category</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {CATEGORIES.map((cat) => (
-              <Card key={cat.name} className="card-surface glow-green-hover transition-all duration-300 cursor-pointer hover:border-green-500/20">
-                <CardContent className="flex items-center gap-4 p-5">
-                  <span className="text-3xl">{cat.icon}</span>
-                  <div>
-                    <div className="font-semibold text-sm">{cat.name}</div>
-                    <div className="text-xs text-slate-500 mt-0.5">{cat.count}</div>
-                  </div>
-                </CardContent>
-              </Card>
+              <Link key={cat.name} href={`/catalogue?category=${cat.name}`}>
+                <Card className="card-surface glow-green-hover transition-all duration-300 cursor-pointer hover:border-green-500/20">
+                  <CardContent className="flex items-center gap-4 p-5">
+                    <span className="text-3xl">{cat.icon}</span>
+                    <div>
+                      <div className="font-semibold text-sm">{cat.name}</div>
+                      <div className="text-xs text-slate-500 mt-0.5">{cat.count}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
         </div>
