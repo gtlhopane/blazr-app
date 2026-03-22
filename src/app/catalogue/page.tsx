@@ -31,6 +31,7 @@ export default function CataloguePage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null)
   // selectedTier: productId -> 50 | 100 | null
   const [selectedTier, setSelectedTier] = useState<Record<string, number | null>>({})
 
@@ -67,9 +68,15 @@ export default function CataloguePage() {
     load()
   }, [])
 
-  const filteredProducts = activeCategory
-    ? products.filter((p) => p.categories?.name === activeCategory)
-    : products
+  const filteredProducts = products.filter((p) => {
+    const catMatch = !activeCategory || p.categories?.name === activeCategory
+    if (!catMatch) return false
+    if (activeCategory === 'Flower' && activeSubcategory) {
+      const desc = (p.description || '').toLowerCase()
+      return desc.startsWith(activeSubcategory.toLowerCase() + ',')
+    }
+    return true
+  })
 
   function handleTierSelect(e: React.MouseEvent, productId: string, qty: number) {
     e.stopPropagation()
@@ -115,7 +122,7 @@ export default function CataloguePage() {
             <Badge
               key={cat.id}
               variant="outline"
-              onClick={() => setActiveCategory(cat.name)}
+              onClick={() => { setActiveCategory(cat.name); setActiveSubcategory(null); }}
               className={`cursor-pointer transition-colors ${
                 activeCategory === cat.name
                   ? "bg-[#FAD03F]/10 border-[#FAD03F] text-[#FAD03F]"
@@ -126,6 +133,25 @@ export default function CataloguePage() {
             </Badge>
           ))}
         </div>
+
+        {/* Flower subcategory filter */}
+        {activeCategory === 'Flower' && (
+          <div className="mb-8 flex gap-2">
+            {['All', 'Indoor', 'Greenhouse'].map((sub) => (
+              <button
+                key={sub}
+                onClick={() => setActiveSubcategory(sub === 'All' ? null : sub)}
+                className={`text-xs px-4 py-1.5 rounded-full border transition-colors ${
+                  (sub === 'All' && !activeSubcategory) || activeSubcategory === sub
+                    ? 'border-[#FAD03F] bg-[#FAD03F]/10 text-[#FAD03F]'
+                    : 'border-[#2a2a2a] text-[#666] hover:border-[#444] hover:text-[#888]'
+                }`}
+              >
+                {sub}
+              </button>
+            ))}
+          </div>
+        )}
 
         {loading ? (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -243,7 +269,7 @@ export default function CataloguePage() {
                       <div className="flex items-baseline gap-3 border-t border-[#FAD03F]/10 pt-3">
                         <div>
                           <span className="text-xs text-[#666]">Wholesale </span>
-                          <span className="text-xl font-bold text-[#FAD03F]">R{product.wholesale_price / 100}</span>
+                          <span className="text-xl font-bold text-[#FAD03F]">R{product.wholesale_price}</span>
                           <span className="text-xs text-[#666]"> /pack</span>
                         </div>
                         <div>
@@ -268,7 +294,7 @@ export default function CataloguePage() {
                     {product.unit !== 'pack' && (
                       <div className="flex items-baseline gap-2">
                         <span className="text-2xl font-bold text-[#FAD03F]">
-                          R{product.wholesale_price / 100}
+                          R{product.wholesale_price}
                         </span>
                         <span className="text-sm text-[#666]">/ {product.unit === 'gummy' ? 'gummy' : product.unit}</span>
                       </div>
@@ -286,7 +312,7 @@ export default function CataloguePage() {
                           }`}
                         >
                           <span className="block text-[10px] opacity-70">50 gummies</span>
-                          <span className="font-bold">R{product.wholesale_price * 50 / 100}</span>
+                          <span className="font-bold">R{product.wholesale_price * 50}</span>
                         </button>
                         <button
                           type="button"
@@ -298,7 +324,7 @@ export default function CataloguePage() {
                           }`}
                         >
                           <span className="block text-[10px] opacity-70">100 gummies</span>
-                          <span className="font-bold">R{product.wholesale_price * 100 / 100}</span>
+                          <span className="font-bold">R{product.wholesale_price * 100}</span>
                         </button>
                       </div>
                     )}
