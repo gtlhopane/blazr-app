@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle, ArrowLeft, Copy, Check } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
 import Link from "next/link"
+import GooglePlacesInput from "@/components/google-places-input"
 
 function formatPrice(amount: number): string {
   return `R${amount.toLocaleString("en-ZA", { minimumFractionDigits: 0 })}`
@@ -322,13 +323,11 @@ export default function CheckoutPage() {
                   <CardContent className="space-y-4">
                     <div className="space-y-1.5">
                       <Label htmlFor="address" className="text-xs text-[#888]">Full Delivery Address *</Label>
-                      <Input
-                        id="address"
+                      <GooglePlacesInput
                         value={deliveryAddress}
-                        onChange={(e) => setDeliveryAddress(e.target.value)}
-                        required
-                        placeholder="123 Main Street, Johannesburg, Gauteng, 2001"
-                        className="border-[#2a2a2a] bg-[#111] h-10"
+                        onChange={(val) => setDeliveryAddress(val)}
+                        placeholder="Start typing your address..."
+                        className="border border-[#2a2a2a] bg-[#111] rounded-lg"
                       />
                     </div>
                     <div className="space-y-1.5">

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import GooglePlacesInput from "@/components/google-places-input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -185,12 +186,15 @@ export default function ApplyFormClient() {
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="address">Business Address</Label>
-                    <Input
-                      id="address"
+                    <GooglePlacesInput
                       value={form.address}
-                      onChange={(e) => update("address", e.target.value)}
-                      className="border-slate-700 bg-slate-900/50 h-10"
-                      placeholder="123 Main Street"
+                      onChange={(val, city, prov) => {
+                        update("address", val)
+                        if (city) update("city", city)
+                        if (prov) update("province", prov)
+                      }}
+                      placeholder="Start typing your address..."
+                      className="border border-slate-700 bg-slate-900/50 rounded-lg"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
