@@ -29,7 +29,8 @@ export const metadata: Metadata = {
   keywords: ["cannabis", "wholesale", "B2B", "dispensary", "South Africa"],
   metadataBase: new URL("https://wholesale.blazr.africa"),
   icons: {
-    icon: "/logos/103058_Blazr_Flat_RT_R_01.svg",
+    icon: "/favicon-32.png",
+    apple: "/apple-touch-icon.png",
   },
   openGraph: {
     type: "website",
