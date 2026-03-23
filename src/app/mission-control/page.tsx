@@ -38,24 +38,33 @@ export default function MissionControl() {
         borderBottom: '1px solid #2a2a2a',
         padding: '36px 32px 28px',
       }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-            {/* BioMuti Logo */}
-            <img
-              src="/biomuti-logo.png"
-              alt="BioMuti"
-              style={{ width: 52, height: 52, borderRadius: 12 }}
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-            />
-            <div>
-              <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em', color: '#ffffff' }}>
-                BioMuti Group <span className="gradient-text">Mission Control</span>
-              </h1>
-              <p style={{ fontSize: 13, color: '#666', marginTop: 2 }}>Live Operations Dashboard</p>
-            </div>
+        {/* Full BioMuti brand header */}
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 0 4px', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <img
+            src="/biomuti-logo.png"
+            alt="BioMuti"
+            style={{ width: 44, height: 44, borderRadius: 10, flexShrink: 0 }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+          />
+          <div>
+            <h1 style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.01em', color: '#ffffff', lineHeight: 1.2 }}>
+              BioMuti Group <span className="gradient-text">Mission Control</span>
+            </h1>
+            <p style={{ fontSize: 11, color: '#888', marginTop: 2 }}>Nature Is Eternal · Live Operations Dashboard</p>
           </div>
+        </div>
+        {/* Full logo banner */}
+        <div style={{ maxWidth: 1280, margin: '0 auto', paddingBottom: 16 }}>
+          <img
+            src="/biomuti-logo-full.png"
+            alt="BioMuti"
+            style={{ width: '100%', maxWidth: 480, height: 'auto', borderRadius: 10 }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+          />
+        </div>
 
-          {/* Status pills */}
+        {/* Status pills */}
+        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
             {[
               { label: 'DNS Pending', color: '#ef4444', dot: '#ef4444' },
