@@ -1,61 +1,20 @@
-import type { Metadata, Viewport } from "next"
-import { Poppins } from "next/font/google"
-import localFont from "next/font/local"
-import "./globals.css"
-import CartLayout from "@/components/cart-layout"
-
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-  variable: "--font-poppins",
-  display: "swap",
-})
-
-const boldena = localFont({
-  src: "../fonts/Boldena-Bold.ttf",
-  variable: "--font-boldena",
-  display: "swap",
-})
+import type { Metadata } from 'next'
+import './globals.css'
 
 export const metadata: Metadata = {
-  title: {
-    default: "Blazr Wholesale — Premium Cannabis B2B Platform",
-    template: "%s | Blazr Wholesale",
-  },
-  description:
-    "South Africa's premier wholesale cannabis platform for licensed dispensaries. Greenhouse & indoor flower, edibles, vapes, and concentrates.",
-  keywords: ["cannabis", "wholesale", "B2B", "dispensary", "South Africa"],
-  metadataBase: new URL("https://wholesale.blazr.africa"),
-  icons: {
-    icon: "/favicon-32.png",
-    apple: "/apple-touch-icon.png",
-  },
-  openGraph: {
-    type: "website",
-    siteName: "Blazr Wholesale",
-    title: "Blazr Wholesale — Premium Cannabis B2B Platform",
-    description: "South Africa's premier wholesale cannabis platform for licensed dispensaries.",
-  },
+  title: 'BioMuti Group Mission Control',
+  description: 'Live operations dashboard — Blazr / BioMuti',
 }
 
-export const viewport: Viewport = {
-  themeColor: "#0A0A0A",
-  colorScheme: "dark",
-}
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
-      <body
-        className={`${poppins.variable} ${boldena.variable} min-h-screen flex flex-col bg-[#0A0A0A] text-white antialiased`}
-        style={{ fontFamily: "var(--font-poppins), sans-serif" }}
-      >
-        <CartLayout>{children}</CartLayout>
-      </body>
+    <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+      </head>
+      <body>{children}</body>
     </html>
   )
 }

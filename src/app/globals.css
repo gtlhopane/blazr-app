@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap');
 
 :root {
   --background: #0A0A0A;
@@ -17,32 +15,25 @@
 }
 
 * {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+* {
   border-color: var(--border);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-poppins), 'Poppins', system-ui, sans-serif;
+  font-family: 'Poppins', 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-}
-
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-boldena), 'Boldena', system-ui, sans-serif;
-  letter-spacing: -0.01em;
-}
-
-::selection {
-  background: #FAD03F;
-  color: #0A0A0A;
-}
-
-html {
-  scroll-behavior: smooth;
+  min-height: 100vh;
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, #FAD03F 0%, #f5e07a 50%, #FAD03F 100%);
+  background: linear-gradient(135deg, #1abc9c 0%, #2ecc71 50%, #1abc9c 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -51,22 +42,17 @@ html {
 .card-surface {
   background: rgba(17, 17, 17, 0.6);
   border: 1px solid rgba(42, 42, 42, 0.8);
-}
-
-.gold-glow {
-  box-shadow: 0 0 40px rgba(250, 208, 63, 0.08);
+  border-radius: 12px;
 }
 
 .gold-glow-hover:hover {
-  transform: translateY(-4px);
+  transform: translateY(-2px);
   transition: all 0.25s ease;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 60px rgba(250, 208, 63, 0.12);
-  border-color: rgba(250, 208, 63, 0.25) !important;
+  box-shadow: 0 0 40px rgba(26, 188, 156, 0.12);
+  border-color: rgba(26, 188, 156, 0.3) !important;
 }
 
-.text-gradient {
-  background: linear-gradient(135deg, #FAD03F 0%, #f5e07a 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+::selection {
+  background: #FAD03F;
+  color: #0A0A0A;
 }
