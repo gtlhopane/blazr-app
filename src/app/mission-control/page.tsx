@@ -152,6 +152,9 @@ export default function MissionControl() {
           {/* Blazr Status */}
           <Card>
             <p style={labelStyle}>🌐 Blazr Wholesale</p>
+            <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 12, borderBottom: '1px solid #1e293b', paddingBottom: 8 }}>
+              Resend propagation: Verified ✅ (checked 22:32 SAST — was pending at 19:32 UTC, confirmed live by morning)
+            </div>
             {[
               { label: 'wholesale.blazr.africa', value: 'Old build (xneelo)', badge: 'yellow' },
               { label: 'blazr-app.vercel.app', value: 'Latest build ✅', badge: 'green' },
@@ -288,6 +291,28 @@ export default function MissionControl() {
                 </div>
               ))}
             </div>
+          </Card>
+
+          {/* History Timeline */}
+          <Card>
+            <p style={labelStyle}>📅 Key Events Timeline</p>
+            {[
+              { time: '2026-03-22 19:32 UTC', event: 'Resend DNS pending — DKIM/SPF records added at xneelo, not yet propagated' },
+              { time: '2026-03-22 22:32 SAST', event: 'Mission Control first built — running at localhost:3456' },
+              { time: '2026-03-22 22:32 SAST', event: 'Resend propagation confirmed ✅ — DKIM + SPF verified' },
+              { time: '2026-03-22', event: 'Supabase leads backfilled — 4,273 leads from retry-list → live DB' },
+              { time: '2026-03-22', event: 'Google Places API key rotated — new key AIzaSyBKxr...' },
+              { time: '2026-03-23 09:15 UTC', event: 'wholesale.blazr.africa DNS changed — xneelo A record removed → outage' },
+              { time: '2026-03-23 10:38 UTC', event: 'A record restored — xneelo added CNAME zone but no record inside' },
+              { time: '2026-03-23 18:28 UTC', event: 'biomuti.co.za SMTP connected — 8,610 emails archived' },
+              { time: '2026-03-23 19:34 UTC', event: 'BioMuti Group Mission Control deployed at blazr-app.vercel.app/mission-control' },
+              { time: '2026-03-23 19:58 UTC', event: 'Autonomous Employee daemon started — runs at 2am SAST nightly' },
+            ].map(ev => (
+              <div key={ev.time} style={{ display: 'flex', gap: 10, padding: '7px 0', borderBottom: '1px solid #1e293b' }}>
+                <span style={{ fontSize: 10, color: '#888', flexShrink: 0, minWidth: 110, fontFamily: 'monospace' }}>{ev.time}</span>
+                <span style={{ fontSize: 11, color: '#d1d5db' }}>{ev.event}</span>
+              </div>
+            ))}
           </Card>
 
           {/* Decisions */}
