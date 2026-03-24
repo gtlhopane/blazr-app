@@ -3,6 +3,7 @@
 import { useState, Suspense } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
+import { CartProvider } from "@/contexts/CartContext"
 import { Eye, EyeOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,7 +13,7 @@ import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { useCart } from "@/contexts/CartContext"
 
-function LoginForm() {
+function LoginPageContent() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPw, setShowPw] = useState(false)
@@ -73,7 +74,7 @@ function LoginForm() {
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password" className="text-xs text-slate-400">Password</Label>
-                  <Link href="#" className="text-xs text-green-400 hover:text-green-300">
+                  <Link href="/forgot-password" className="text-xs text-green-400 hover:text-green-300">
                     Forgot password?
                   </Link>
                 </div>
@@ -119,10 +120,13 @@ function LoginForm() {
   )
 }
 
+// Wrapper with CartProvider for SSR safety
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-[80vh] items-center justify-center"><div className="text-[#888]">Loading...</div></div>}>
-      <LoginForm />
-    </Suspense>
+    <CartProvider>
+      <Suspense fallback={<div className="flex min-h-[80vh] items-center justify-center"><div className="text-slate-400">Loading...</div></div>}>
+        <LoginPageContent />
+      </Suspense>
+    </CartProvider>
   )
 }
