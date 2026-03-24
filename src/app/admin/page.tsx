@@ -2,134 +2,105 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { LogOut, Package, ShoppingCart, CheckCircle, Loader2, ChevronRight, LayoutGrid } from "lucide-react"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { LogOut, ShoppingCart, Loader2, ChevronRight, X, Check } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
+import Link from "next/link"
 
 const ADMIN_PASSWORD = "blazr2024"
 
-// ─── Category Config ───────────────────────────────────────────────────────────
-// To add a new category: 1) Create its products table, 2) Add entry here, 3) Add admin section
-export const CATEGORIES = {
-  vapes: {
-    key: "vapes",
-    label: "Vapes",
-    icon: "💨",
-    emoji: "💨",
-    description: "Disposable vape pens & cartridges",
-    categoryId: "5c53f38c-4003-4971-93ae-797cf7cd0e57", // Supabase category_id
-    primaryField: "strain",   // What to call individual items (strain, flavor, product...)
-    unitLabel: "units",
-  },
-  concentrates: {
-    key: "concentrates",
-    label: "Concentrates",
-    icon: "💎",
-    emoji: "💎",
-    description: "Premium cannabis concentrates & extracts",
-    categoryId: "2e427b8c-f893-45fc-a449-cdf4f853f0be",
-    primaryField: "product",
-    unitLabel: "units",
-  },
-  // Future categories — uncomment and configure when ready:
-  // edibles: {
-  //   key: "edibles",
-  //   label: "Edibles",
-  //   icon: "🍬",
-  //   emoji: "🍬",
-  //   description: "Gummies, chocolates & infused products",
-  //   categoryId: "8db29e34-d0aa-4442-98ab-3ca7c77bac1b",
-  //   primaryField: "product",
-  //   unitLabel: "units",
-  // },
-  // flower: {
-  //   key: "flower",
-  //   label: "Flower",
-  //   icon: "🌿",
-  //   emoji: "🌿",
-  //   description: "Premium cannabis flower",
-  //   categoryId: "e14d43b7-8fa3-4268-bebc-8abff9f6c0ac",
-  //   primaryField: "strain",
-  //   unitLabel: "grams",
-  // },
-  // oils: {
-  //   key: "oils",
-  //   label: "Oils",
-  //   icon: "💧",
-  //   emoji: "💧",
-  //   description: "Tinctures & concentrated oils",
-  //   categoryId: "2e427b8c-f893-45fc-a449-cdf4f853f0be",
-  //   primaryField: "product",
-  //   unitLabel: "ml",
-  // },
-} as const
-
-export type CategoryKey = keyof typeof CATEGORIES
-
-// ─── Interfaces ────────────────────────────────────────────────────────────────
-interface Order {
+// ─── Types ─────────────────────────────────────────────────────────────────────
+interface WholesaleOrder {
   id: string
-  status: string
+  order_number: string
+  full_name: string
+  business_name: string | null
+  email: string
+  phone: string
+  delivery_address: string
+  subtotal: number
   total: number
+  order_status: string
+  payment_status: string
   notes: string | null
   created_at: string
+  updated_at: string
 }
 
-interface Product {
+interface WholesaleOrderItem {
   id: string
-  name: string
-  slug: string
-  stock_level: number
-  wholesale_price: number
-  image_url: string | null
-  is_featured: boolean
-  description: string | null
+  order_id: string
+  product_name: string
+  category: string | null
+  quantity: number
+  unit_price: number
+  line_total: number
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
-function getInvoiceNumber(notes: string | null): string {
-  if (!notes) return "—"
-  const match = notes.match(/Invoice:\s*([A-Z0-9-]+)/)
-  return match ? match[1] : notes.slice(0, 24)
-}
+const ORDER_STATUS_OPTIONS = [
+  { value: "pending", label: "Pending" },
+  { value: "processing", label: "Processing" },
+  { value: "packed", label: "Packed" },
+  { value: "dispatched", label: "Dispatched" },
+  { value: "completed", label: "Completed" },
+]
 
-function getCategoryFromNotes(notes: string | null): string {
-  if (!notes) return "vapes"
-  if (notes.includes("Vape")) return "vapes"
-  if (notes.includes("Concentrate")) return "concentrates"
-  if (notes.includes("Edible")) return "edibles"
-  if (notes.includes("Flower")) return "flower"
-  if (notes.includes("Oil")) return "oils"
-  return "vapes"
-}
+const PAYMENT_STATUS_OPTIONS = [
+  { value: "awaiting_pop", label: "Awaiting PoP" },
+  { value: "paid", label: "Paid" },
+  { value: "cancelled", label: "Cancelled" },
+]
 
-const statusColors: Record<string, string> = {
+const ORDER_STATUS_COLORS: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
-  quoted: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  confirmed: "bg-green-500/10 text-green-400 border-green-500/20",
-  processing: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-  shipped: "bg-green-600/10 text-green-300 border-green-600/20",
-  delivered: "bg-green-700/20 text-green-200 border-green-700/30",
+  processing: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  packed: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+  dispatched: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
+  completed: "bg-green-500/10 text-green-400 border-green-500/20",
+}
+
+const PAYMENT_STATUS_COLORS: Record<string, string> = {
+  awaiting_pop: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+  paid: "bg-green-500/10 text-green-400 border-green-500/20",
   cancelled: "bg-red-500/10 text-red-400 border-red-500/20",
-  draft: "bg-slate-500/10 text-slate-400 border-slate-500/20",
+}
+
+function formatPrice(amount: number): string {
+  return `R${(amount || 0).toLocaleString("en-ZA")}`
+}
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString("en-ZA", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState(false)
   const [passwordInput, setPasswordInput] = useState("")
-  const [activeSection, setActiveSection] = useState<CategoryKey>("vapes")
-  const [activeTab, setActiveTab] = useState<"orders" | "inventory">("orders")
-  const [orders, setOrders] = useState<Order[]>([])
-  const [products, setProducts] = useState<Product[]>([])
+  const [orders, setOrders] = useState<WholesaleOrder[]>([])
   const [loading, setLoading] = useState(false)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [selectedOrder, setSelectedOrder] = useState<WholesaleOrder | null>(null)
+  const [orderItems, setOrderItems] = useState<WholesaleOrderItem[]>([])
+  const [loadingDetails, setLoadingDetails] = useState(false)
+  const [search, setSearch] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [paymentFilter, setPaymentFilter] = useState("all")
 
+  // ── Auth ───────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("blazr_admin_token")
@@ -138,29 +109,21 @@ export default function AdminPage() {
   }, [])
 
   useEffect(() => {
-    if (authenticated) loadData()
-  }, [authenticated, activeSection])
+    if (authenticated) loadOrders()
+  }, [authenticated])
 
-  async function loadData() {
+  async function loadOrders() {
     setLoading(true)
     const supabase = createClient()
-    const cat = CATEGORIES[activeSection]
+    const { data, error } = await supabase
+      .from("wholesale_orders")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(200)
 
-    const [{ data: ords }, { data: prods }] = await Promise.all([
-      supabase
-        .from("orders")
-        .select("id, status, total, notes, created_at")
-        .order("created_at", { ascending: false })
-        .limit(100),
-      supabase
-        .from("products")
-        .select("id, name, slug, stock_level, wholesale_price, image_url, is_featured, description")
-        .eq("category_id", cat.categoryId)
-        .order("name"),
-    ])
-
-    setOrders((ords as Order[]) || [])
-    setProducts((prods as Product[]) || [])
+    if (!error && data) {
+      setOrders(data as WholesaleOrder[])
+    }
     setLoading(false)
   }
 
@@ -179,34 +142,47 @@ export default function AdminPage() {
     localStorage.removeItem("blazr_admin_token")
     setAuthenticated(false)
     setOrders([])
-    setProducts([])
   }
 
-  async function updateOrderStatus(orderId: string, status: string) {
+  async function openOrderDetail(order: WholesaleOrder) {
+    setSelectedOrder(order)
+    setLoadingDetails(true)
+    const supabase = createClient()
+    const { data } = await supabase
+      .from("wholesale_order_items")
+      .select("*")
+      .eq("order_id", order.id)
+      .order("id")
+    setOrderItems((data as WholesaleOrderItem[]) || [])
+    setLoadingDetails(false)
+  }
+
+  async function updateOrderStatus(orderId: string, field: "order_status" | "payment_status", value: string) {
     setUpdatingId(orderId)
     const supabase = createClient()
-    const { error } = await supabase.from("orders").update({ status }).eq("id", orderId)
+    const update: Record<string, string> = { [field]: value }
+    if (field === "order_status") update.updated_at = new Date().toISOString()
+
+    const { error } = await supabase
+      .from("wholesale_orders")
+      .update(update)
+      .eq("id", orderId)
+
     if (!error) {
-      setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status } : o))
-      toast.success(`Order ${status}`)
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, [field]: value } : o))
+      )
+      if (selectedOrder?.id === orderId) {
+        setSelectedOrder((prev) => prev ? { ...prev, [field]: value } : null)
+      }
+      toast.success(`Updated ${field} to "${value}"`)
     } else {
       toast.error("Failed to update")
     }
     setUpdatingId(null)
   }
 
-  async function updateStock(productId: string, newStock: number) {
-    const supabase = createClient()
-    const { error } = await supabase.from("products").update({ stock_level: newStock }).eq("id", productId)
-    if (!error) {
-      setProducts((prev) => prev.map((p) => p.id === productId ? { ...p, stock_level: newStock } : p))
-      toast.success("Stock updated")
-    } else {
-      toast.error("Failed to update stock")
-    }
-  }
-
-  // ── Login Screen ──────────────────────────────────────────────────────────────
+  // ── Login Screen ─────────────────────────────────────────────────────────────
   if (!authenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
@@ -214,7 +190,7 @@ export default function AdminPage() {
           <div className="text-center mb-8">
             <div className="text-4xl mb-3">🌿</div>
             <h1 className="text-2xl font-bold">Blazr Admin</h1>
-            <p className="text-sm text-[#666] mt-1">Enter password to access the wholesale portal</p>
+            <p className="text-sm text-[#666] mt-1">Wholesale order management</p>
           </div>
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
@@ -236,17 +212,27 @@ export default function AdminPage() {
     )
   }
 
-  const cat = CATEGORIES[activeSection]
-  const categoryOrders = orders // All orders shown — filtered client-side by category in notes
+  // ── Filtered orders ──────────────────────────────────────────────────────────
+  const filteredOrders = orders.filter((o) => {
+    const matchSearch =
+      !search.trim() ||
+      o.order_number?.toLowerCase().includes(search.toLowerCase()) ||
+      o.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+      o.email?.toLowerCase().includes(search.toLowerCase()) ||
+      o.business_name?.toLowerCase().includes(search.toLowerCase())
+    const matchStatus = statusFilter === "all" || o.order_status === statusFilter
+    const matchPayment = paymentFilter === "all" || o.payment_status === paymentFilter
+    return matchSearch && matchStatus && matchPayment
+  })
 
-  const pendingCount = categoryOrders.filter((o) => o.status === "pending").length
-  const confirmedCount = categoryOrders.filter((o) => ["confirmed", "processing", "shipped", "delivered"].includes(o.status)).length
+  const pendingCount = orders.filter((o) => o.order_status === "pending").length
+  const paidCount = orders.filter((o) => o.payment_status === "paid").length
+  const awaitingPopCount = orders.filter((o) => o.payment_status === "awaiting_pop").length
 
   return (
     <div className="min-h-screen flex">
       {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
       <aside className="w-64 border-r border-[#2a2a2a] bg-[#0d0d0d] flex-shrink-0 flex flex-col">
-        {/* Logo */}
         <div className="p-5 border-b border-[#2a2a2a]">
           <div className="flex items-center gap-2">
             <span className="text-xl">🌿</span>
@@ -257,47 +243,23 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Category Nav */}
         <div className="flex-1 overflow-y-auto py-4">
           <div className="px-3 mb-2">
-            <p className="text-[10px] text-[#555] uppercase tracking-wider font-medium px-2">Categories</p>
-          </div>
-          {(Object.keys(CATEGORIES) as CategoryKey[]).map((key) => {
-            const c = CATEGORIES[key]
-            const isActive = activeSection === key
-            return (
-              <button
-                key={key}
-                onClick={() => { setActiveSection(key); setActiveTab("inventory") }}
-                className={`w-full flex items-center gap-3 px-5 py-3 text-sm transition-colors ${
-                  isActive
-                    ? "bg-[#FAD03F]/10 text-[#FAD03F] border-r-2 border-[#FAD03F]"
-                    : "text-[#888] hover:text-white hover:bg-[#1a1a1a]"
-                }`}
-              >
-                <span className="text-lg">{c.emoji}</span>
-                <span className="font-medium">{c.label}</span>
-              </button>
-            )
-          })}
-
-          <div className="px-3 mt-6 mb-2">
             <p className="text-[10px] text-[#555] uppercase tracking-wider font-medium px-2">Management</p>
           </div>
-          <button
-            onClick={() => setActiveTab("orders")}
-            className={`w-full flex items-center gap-3 px-5 py-3 text-sm transition-colors ${
-              activeTab === "orders"
-                ? "bg-[#FAD03F]/10 text-[#FAD03F] border-r-2 border-[#FAD03F]"
-                : "text-[#888] hover:text-white hover:bg-[#1a1a1a]"
-            }`}
-          >
+          <div className="px-5 py-3 text-sm bg-[#FAD03F]/10 text-[#FAD03F] border-r-2 border-[#FAD03F] flex items-center gap-3">
             <ShoppingCart className="h-4 w-4" />
-            <span className="font-medium">All Orders</span>
-          </button>
+            <span className="font-medium">Wholesale Orders</span>
+          </div>
+          <Link
+            href="/"
+            className="w-full flex items-center gap-3 px-5 py-3 text-sm transition-colors text-[#888] hover:text-white hover:bg-[#1a1a1a]"
+          >
+            <span className="text-lg">🏠</span>
+            <span>Storefront</span>
+          </Link>
         </div>
 
-        {/* Logout */}
         <div className="p-4 border-t border-[#2a2a2a]">
           <Button
             variant="outline"
@@ -312,301 +274,342 @@ export default function AdminPage() {
 
       {/* ── Main Content ───────────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Bar */}
         <header className="border-b border-[#2a2a2a] bg-[#111]/80 px-6 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold">
-              {activeTab === "orders" ? (
-                <span className="flex items-center gap-2">
-                  <ShoppingCart className="h-5 w-5 text-[#FAD03F]" />
-                  All Orders
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <span className="text-2xl">{cat.emoji}</span>
-                  {cat.label}
-                </span>
-              )}
+            <h1 className="text-xl font-bold flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5 text-[#FAD03F]" />
+              Wholesale Orders
             </h1>
             <p className="text-xs text-[#666] mt-0.5">
-              {activeTab === "orders"
-                ? "View and manage all wholesale orders across categories"
-                : `${cat.description} — ${products.length} products`}
+              {orders.length} total orders
             </p>
           </div>
           <Badge className="bg-[#FAD03F]/10 text-[#FAD03F] border-[#FAD03F]/20 text-xs">
-            {cat.label} Admin
+            Wholesale
           </Badge>
         </header>
 
-        {/* Body */}
         <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
             <div className="flex items-center justify-center py-32">
               <Loader2 className="h-8 w-8 animate-spin text-[#FAD03F]" />
             </div>
-          ) : activeTab === "orders" ? (
-            <OrdersTab
-              orders={orders}
-              updatingId={updatingId}
-              onStatusChange={updateOrderStatus}
-              statusColors={statusColors}
-            />
           ) : (
-            <InventoryTab
-              products={products}
-              cat={cat}
-              onStockUpdate={updateStock}
-            />
+            <div className="space-y-6">
+              {/* Stats */}
+              <div className="grid gap-4 sm:grid-cols-4">
+                {[
+                  { label: "Total Orders", value: orders.length, color: "text-white" },
+                  { label: "Pending", value: pendingCount, color: "text-yellow-400" },
+                  { label: "Awaiting Payment", value: awaitingPopCount, color: "text-orange-400" },
+                  { label: "Paid", value: paidCount, color: "text-green-400" },
+                ].map(({ label, value, color }) => (
+                  <Card key={label} className="border-[#2a2a2a] bg-[#111]">
+                    <CardContent className="p-5">
+                      <div className={`text-2xl font-bold ${color}`}>{value}</div>
+                      <p className="text-xs text-[#666] mt-1">{label}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Filters */}
+              <div className="flex flex-wrap gap-3">
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search orders, names, emails..."
+                  className="max-w-xs bg-[#111] border-[#2a2a2a] h-9 text-sm"
+                />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="h-9 rounded border border-[#2a2a2a] bg-[#111] px-3 text-sm text-[#888] hover:text-white cursor-pointer"
+                >
+                  <option value="all">All Statuses</option>
+                  {ORDER_STATUS_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+                <select
+                  value={paymentFilter}
+                  onChange={(e) => setPaymentFilter(e.target.value)}
+                  className="h-9 rounded border border-[#2a2a2a] bg-[#111] px-3 text-sm text-[#888] hover:text-white cursor-pointer"
+                >
+                  <option value="all">All Payments</option>
+                  {PAYMENT_STATUS_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+                <span className="text-xs text-[#666] self-center ml-auto">
+                  {filteredOrders.length} orders
+                </span>
+              </div>
+
+              {/* Orders Table */}
+              <Card className="border-[#2a2a2a] bg-[#111]">
+                <CardContent className="p-0">
+                  {filteredOrders.length === 0 ? (
+                    <div className="py-20 text-center text-sm text-[#666]">
+                      No orders found.
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-[#2a2a2a] hover:bg-transparent">
+                          <TableHead className="text-xs text-[#666]">Order #</TableHead>
+                          <TableHead className="text-xs text-[#666]">Customer</TableHead>
+                          <TableHead className="text-xs text-[#666]">Email</TableHead>
+                          <TableHead className="text-xs text-[#666]">Total</TableHead>
+                          <TableHead className="text-xs text-[#666]">Order Status</TableHead>
+                          <TableHead className="text-xs text-[#666]">Payment</TableHead>
+                          <TableHead className="text-xs text-[#666]">Date</TableHead>
+                          <TableHead className="text-xs text-[#666]"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredOrders.map((order) => (
+                          <TableRow
+                            key={order.id}
+                            className="border-[#2a2a2a] hover:bg-[#1a1a1a] cursor-pointer"
+                            onClick={() => openOrderDetail(order)}
+                          >
+                            <TableCell>
+                              <span className="font-mono text-sm text-[#FAD03F] font-semibold">
+                                {order.order_number}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <p className="text-sm font-medium text-white">{order.full_name}</p>
+                                {order.business_name && (
+                                  <p className="text-xs text-[#666]">{order.business_name}</p>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm text-[#888]">{order.email}</span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm font-semibold text-white">
+                                {formatPrice(order.total)}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={ORDER_STATUS_COLORS[order.order_status] || "bg-slate-700"}>
+                                {order.order_status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={PAYMENT_STATUS_COLORS[order.payment_status] || "bg-slate-700"}>
+                                {order.payment_status === "awaiting_pop" ? "Awaiting PoP" : order.payment_status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-xs text-[#666]">
+                                {formatDate(order.created_at)}
+                              </span>
+                            </TableCell>
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center gap-2">
+                                {/* Inline status editors */}
+                                <select
+                                  className="h-7 rounded border border-[#2a2a2a] bg-[#0d0d0d] px-1.5 text-xs text-[#888] hover:text-white cursor-pointer"
+                                  value={order.order_status}
+                                  onChange={(e) => {
+                                    if (e.target.value !== order.order_status) {
+                                      updateOrderStatus(order.id, "order_status", e.target.value)
+                                    }
+                                  }}
+                                  disabled={updatingId === order.id}
+                                >
+                                  {ORDER_STATUS_OPTIONS.map((o) => (
+                                    <option key={o.value} value={o.value}>{o.label}</option>
+                                  ))}
+                                </select>
+                                <ChevronRight className="h-4 w-4 text-[#555]" />
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           )}
         </div>
       </div>
-    </div>
-  )
-}
 
-// ─── Orders Tab ────────────────────────────────────────────────────────────────
-function OrdersTab({
-  orders,
-  updatingId,
-  onStatusChange,
-  statusColors,
-}: {
-  orders: Order[]
-  updatingId: string | null
-  onStatusChange: (id: string, status: string) => void
-  statusColors: Record<string, string>
-}) {
-  return (
-    <div className="space-y-6">
-      {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-4">
-        {[
-          { label: "Total Orders", value: orders.length, color: "text-white" },
-          { label: "Pending", value: orders.filter((o) => o.status === "pending").length, color: "text-yellow-400" },
-          { label: "Confirmed", value: orders.filter((o) => ["confirmed", "processing", "shipped", "delivered"].includes(o.status)).length, color: "text-green-400" },
-          { label: "This Month", value: orders.filter((o) => new Date(o.created_at).getMonth() === new Date().getMonth()).length, color: "text-blue-400" },
-        ].map(({ label, value, color }) => (
-          <Card key={label} className="border-[#2a2a2a] bg-[#111]">
-            <CardContent className="p-5">
-              <div className={`text-2xl font-bold ${color}`}>{value}</div>
-              <p className="text-xs text-[#666] mt-1">{label}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* ── Order Detail Sheet ─────────────────────────────────────────────── */}
+      <Sheet open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
+        <SheetContent className="w-full max-w-lg bg-[#111] border-[#2a2a2a] overflow-y-auto">
+          {selectedOrder && (
+            <>
+              <SheetHeader className="border-b border-[#2a2a2a] pb-4 mb-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <SheetTitle className="text-[#FAD03F] font-mono text-lg">
+                      {selectedOrder.order_number}
+                    </SheetTitle>
+                    <p className="text-xs text-[#666] mt-1">
+                      {formatDate(selectedOrder.created_at)}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedOrder(null)}
+                    className="text-[#666] hover:text-white h-8 w-8 p-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </SheetHeader>
 
-      {/* Orders Table */}
-      <Card className="border-[#2a2a2a] bg-[#111]">
-        <CardContent className="p-0">
-          {orders.length === 0 ? (
-            <div className="py-20 text-center text-sm text-[#666]">
-              No orders yet. Orders from any product category will appear here.
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="border-[#2a2a2a] hover:bg-transparent">
-                  <TableHead className="text-xs text-[#666]">Invoice</TableHead>
-                  <TableHead className="text-xs text-[#666]">Category</TableHead>
-                  <TableHead className="text-xs text-[#666]">Total</TableHead>
-                  <TableHead className="text-xs text-[#666]">Status</TableHead>
-                  <TableHead className="text-xs text-[#666]">Date</TableHead>
-                  <TableHead className="text-xs text-[#666]">Update</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {orders.map((order) => {
-                  const catKey = getCategoryFromNotes(order.notes) as CategoryKey
-                  const catLabel = CATEGORIES[catKey]?.label || catKey
-                  const catEmoji = CATEGORIES[catKey]?.emoji || "📦"
-                  return (
-                    <TableRow key={order.id} className="border-[#2a2a2a]">
-                      <TableCell>
-                        <span className="font-mono text-sm text-[#FAD03F]">
-                          {getInvoiceNumber(order.notes)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">
-                          {catEmoji} {catLabel}
-                        </span>
-                      </TableCell>
-                      <TableCell className="font-semibold text-white">
-                        R{(order.total || 0).toLocaleString()}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={statusColors[order.status] || "bg-slate-700"}>
-                          {order.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs text-[#666]">
-                        {new Date(order.created_at).toLocaleDateString("ZA")}
-                      </TableCell>
-                      <TableCell>
-                        <select
-                          className={`h-7 rounded border px-2 text-xs font-medium bg-[#0d0d0d] ${statusColors[order.status]}`}
-                          value={order.status}
-                          onChange={(e) => onStatusChange(order.id, e.target.value)}
-                          disabled={updatingId === order.id}
-                        >
-                          {["draft", "pending", "quoted", "confirmed", "processing", "shipped", "delivered", "cancelled"].map((s) => (
-                            <option key={s} value={s}>{s}</option>
-                          ))}
-                        </select>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
+              {loadingDetails ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="h-6 w-6 animate-spin text-[#FAD03F]" />
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Status editors */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs text-[#666] mb-1.5 block">Order Status</Label>
+                      <select
+                        className="w-full h-9 rounded border border-[#2a2a2a] bg-[#0d0d0d] px-3 text-sm text-white cursor-pointer"
+                        value={selectedOrder.order_status}
+                        onChange={(e) => updateOrderStatus(selectedOrder.id, "order_status", e.target.value)}
+                        disabled={updatingId === selectedOrder.id}
+                      >
+                        {ORDER_STATUS_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-[#666] mb-1.5 block">Payment Status</Label>
+                      <select
+                        className="w-full h-9 rounded border border-[#2a2a2a] bg-[#0d0d0d] px-3 text-sm text-white cursor-pointer"
+                        value={selectedOrder.payment_status}
+                        onChange={(e) => updateOrderStatus(selectedOrder.id, "payment_status", e.target.value)}
+                        disabled={updatingId === selectedOrder.id}
+                      >
+                        {PAYMENT_STATUS_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
 
-// ─── Inventory Tab ────────────────────────────────────────────────────────────
-function InventoryTab({
-  products,
-  cat,
-  onStockUpdate,
-}: {
-  products: Product[]
-  cat: (typeof CATEGORIES)[CategoryKey]
-  onStockUpdate: (id: string, stock: number) => void
-}) {
-  const [search, setSearch] = useState("")
+                  {/* Badges */}
+                  <div className="flex gap-2">
+                    <Badge className={ORDER_STATUS_COLORS[selectedOrder.order_status] || "bg-slate-700"}>
+                      {selectedOrder.order_status}
+                    </Badge>
+                    <Badge className={PAYMENT_STATUS_COLORS[selectedOrder.payment_status] || "bg-slate-700"}>
+                      {selectedOrder.payment_status === "awaiting_pop" ? "Awaiting PoP" : selectedOrder.payment_status}
+                    </Badge>
+                  </div>
 
-  const filtered = products.filter((p) =>
-    !search.trim() || p.name.toLowerCase().includes(search.toLowerCase())
-  )
+                  {/* Totals */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-lg border border-[#2a2a2a] bg-[#0d0d0d] p-3">
+                      <p className="text-xs text-[#666]">Subtotal</p>
+                      <p className="text-lg font-bold text-white mt-0.5">{formatPrice(selectedOrder.subtotal)}</p>
+                    </div>
+                    <div className="rounded-lg border border-[#2a2a2a] bg-[#0d0d0d] p-3">
+                      <p className="text-xs text-[#666]">Total</p>
+                      <p className="text-lg font-bold text-[#FAD03F] mt-0.5">{formatPrice(selectedOrder.total)}</p>
+                    </div>
+                  </div>
 
-  const outOfStock = products.filter((p) => p.stock_level === 0).length
-  const totalStock = products.reduce((sum, p) => sum + (p.stock_level || 0), 0)
-
-  return (
-    <div className="space-y-6">
-      {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-4">
-        {[
-          { label: `Total ${cat.label} Products`, value: products.length, color: "text-white" },
-          { label: "Total Stock", value: totalStock, color: "text-blue-400" },
-          { label: "In Stock", value: products.length - outOfStock, color: "text-green-400" },
-          { label: "Out of Stock", value: outOfStock, color: "text-red-400" },
-        ].map(({ label, value, color }) => (
-          <Card key={label} className="border-[#2a2a2a] bg-[#111]">
-            <CardContent className="p-5">
-              <div className={`text-2xl font-bold ${color}`}>{value}</div>
-              <p className="text-xs text-[#666] mt-1">{label}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Search */}
-      <div className="flex items-center gap-3">
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={`Search ${cat.label.toLowerCase()}...`}
-          className="max-w-xs bg-[#111] border-[#2a2a2a] h-9 text-sm"
-        />
-        <span className="text-xs text-[#666]">{filtered.length} products</span>
-      </div>
-
-      {/* Products Table */}
-      <Card className="border-[#2a2a2a] bg-[#111]">
-        <CardContent className="p-0">
-          {products.length === 0 ? (
-            <div className="py-20 text-center text-sm text-[#666]">
-              No {cat.label.toLowerCase()} products found. Add products to the &quot;{cat.label}&quot; category in Supabase to see them here.
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="border-[#2a2a2a] hover:bg-transparent">
-                  <TableHead className="text-xs text-[#666]">Product</TableHead>
-                  <TableHead className="text-xs text-[#666]">Featured</TableHead>
-                  <TableHead className="text-xs text-[#666]">Price</TableHead>
-                  <TableHead className="text-xs text-[#666]">Stock</TableHead>
-                  <TableHead className="text-xs text-[#666]">Update Stock</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((p) => (
-                  <TableRow key={p.id} className="border-[#2a2a2a]">
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        {p.image_url ? (
-                          <img
-                            src={p.image_url}
-                            alt={p.name}
-                            className="h-8 w-8 rounded object-cover border border-[#2a2a2a]"
-                            onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
-                          />
-                        ) : (
-                          <div className="h-8 w-8 rounded bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center text-xs">
-                            {cat.emoji}
-                          </div>
-                        )}
-                        <div>
-                          <p className="font-medium text-sm">{p.name}</p>
-                          <p className="text-[10px] text-[#555] truncate max-w-[200px]">
-                            {p.description || "—"}
-                          </p>
+                  {/* Buyer info */}
+                  <div>
+                    <h3 className="text-xs text-[#666] uppercase tracking-wider mb-3">Buyer Information</h3>
+                    <div className="space-y-2 text-sm rounded-lg border border-[#2a2a2a] bg-[#0d0d0d] p-4">
+                      <div className="flex justify-between">
+                        <span className="text-[#666]">Name</span>
+                        <span className="text-white font-medium">{selectedOrder.full_name}</span>
+                      </div>
+                      {selectedOrder.business_name && (
+                        <div className="flex justify-between">
+                          <span className="text-[#666]">Business</span>
+                          <span className="text-white">{selectedOrder.business_name}</span>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {p.is_featured ? (
-                        <Badge className="bg-[#FAD03F]/10 text-[#FAD03F] border-[#FAD03F]/20 text-[10px]">
-                          ★ Featured
-                        </Badge>
-                      ) : (
-                        <span className="text-[#555] text-xs">—</span>
                       )}
-                    </TableCell>
-                    <TableCell className="font-semibold text-green-400">
-                      R{p.wholesale_price / 100}
-                    </TableCell>
-                    <TableCell>
-                      <span className={`font-semibold ${p.stock_level > 0 ? "text-green-400" : "text-red-400"}`}>
-                        {p.stock_level}
-                      </span>
-                      <span className="text-[#555] text-xs ml-1">{cat.unitLabel}</span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="number"
-                          min="0"
-                          defaultValue={p.stock_level}
-                          className="w-24 h-7 bg-[#0d0d0d] border-[#2a2a2a] text-sm"
-                          id={`stock-${p.id}`}
-                        />
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            const input = document.getElementById(`stock-${p.id}`) as HTMLInputElement
-                            const val = parseInt(input?.value || "0", 10)
-                            onStockUpdate(p.id, val)
-                          }}
-                          className="h-7 bg-[#FAD03F] hover:bg-[#f5e07a] text-black text-xs px-3"
-                        >
-                          Save
-                        </Button>
+                      <div className="flex justify-between">
+                        <span className="text-[#666]">Email</span>
+                        <a href={`mailto:${selectedOrder.email}`} className="text-[#FAD03F] hover:underline">
+                          {selectedOrder.email}
+                        </a>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                      <div className="flex justify-between">
+                        <span className="text-[#666]">Phone</span>
+                        <span className="text-white">{selectedOrder.phone}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Delivery address */}
+                  <div>
+                    <h3 className="text-xs text-[#666] uppercase tracking-wider mb-3">Delivery Address</h3>
+                    <div className="rounded-lg border border-[#2a2a2a] bg-[#0d0d0d] p-4 text-sm text-[#ccc]">
+                      {selectedOrder.delivery_address}
+                    </div>
+                  </div>
+
+                  {/* Order items */}
+                  {orderItems.length > 0 && (
+                    <div>
+                      <h3 className="text-xs text-[#666] uppercase tracking-wider mb-3">Order Items</h3>
+                      <div className="space-y-2">
+                        {orderItems.map((item) => (
+                          <div
+                            key={item.id}
+                            className="flex items-center justify-between rounded-lg border border-[#2a2a2a] bg-[#0d0d0d] p-3 text-sm"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-white truncate">{item.product_name}</p>
+                              {item.category && (
+                                <p className="text-xs text-[#666]">{item.category}</p>
+                              )}
+                              <p className="text-xs text-[#888] mt-0.5">
+                                {item.quantity} × {formatPrice(item.unit_price)}
+                              </p>
+                            </div>
+                            <p className="font-semibold text-[#FAD03F] ml-4 flex-shrink-0">
+                              {formatPrice(item.line_total)}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  {selectedOrder.notes && (
+                    <div>
+                      <h3 className="text-xs text-[#666] uppercase tracking-wider mb-3">Notes</h3>
+                      <div className="rounded-lg border border-[#2a2a2a] bg-[#0d0d0d] p-4 text-sm text-[#ccc]">
+                        {selectedOrder.notes}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Timestamps */}
+                  <div className="text-xs text-[#555] border-t border-[#2a2a2a] pt-4 space-y-1">
+                    <p>Created: {formatDate(selectedOrder.created_at)}</p>
+                    <p>Updated: {formatDate(selectedOrder.updated_at)}</p>
+                  </div>
+                </div>
+              )}
+            </>
           )}
-        </CardContent>
-      </Card>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
-

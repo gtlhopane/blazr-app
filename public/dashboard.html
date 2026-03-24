@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mission Control — Blazr / BioMuti / Zaka</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0a0a0f;
+      color: #e0e0e0;
+      font-family: 'Inter', -apple-system, sans-serif;
+      min-height: 100vh;
+    }
+    .hero {
+      background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%);
+      border-bottom: 1px solid #1e3a2f;
+      padding: 24px 32px;
+    }
+    .hero h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+    }
+    .hero .subtitle {
+      font-size: 13px;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+    .hero .status-row {
+      display: flex;
+      gap: 24px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      background: #111118;
+      border: 1px solid #1e293b;
+      padding: 6px 12px;
+      border-radius: 20px;
+    }
+    .pill-ok { border-color: #22c55e33; color: #22c55e; }
+    .pill-warn { border-color: #f59e0b55; color: #f59e0b; }
+    .pill-bad { border-color: #ef444455; color: #ef4444; }
+    .pill-new { border-color: #a855f733; color: #a855f7; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .dot-green { background: #22c55e; }
+    .dot-yellow { background: #f59e0b; }
+    .dot-red { background: #ef4444; }
+    .dot-purple { background: #a855f7; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+      padding: 24px 32px;
+    }
+    .card {
+      background: #111118;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .card-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #6b7280;
+      margin-bottom: 16px;
+    }
+    .big-number {
+      font-size: 48px;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1;
+    }
+    .big-number span { font-size: 20px; color: #6b7280; font-weight: 400; }
+    .sub { font-size: 12px; color: #6b7280; margin-top: 6px; }
+    .sub span { color: #22c55e; }
+
+    .source-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #1e293b;
+      font-size: 13px;
+    }
+    .source-row:last-child { border-bottom: none; }
+    .source-name { color: #d1d5db; }
+    .source-count { font-weight: 600; color: #ffffff; }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .badge-green { background: #22c55e22; color: #22c55e; }
+    .badge-yellow { background: #f59e0b22; color: #f59e0b; }
+    .badge-red { background: #ef444422; color: #ef4444; }
+    .badge-gray { background: #37415155; color: #9ca3af; }
+    .badge-purple { background: #a855f722; color: #a855f7; }
+
+    .alert-item {
+      display: flex;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid #1e293b;
+      font-size: 13px;
+    }
+    .alert-item:last-child { border-bottom: none; }
+    .alert-icon { margin-top: 2px; }
+    .alert-title { color: #d1d5db; font-weight: 500; }
+    .alert-desc { color: #6b7280; font-size: 11px; margin-top: 2px; }
+
+    .todo-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 0;
+      font-size: 13px;
+      color: #d1d5db;
+    }
+    .checkbox {
+      width: 16px;
+      height: 16px;
+      border: 1px solid #374151;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .checked { background: #22c55e22; border-color: #22c55e; }
+    .todo-item.done { color: #6b7280; text-decoration: line-through; }
+
+    .dns-status { font-size: 12px; }
+    .dns-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid #1e293b;
+      font-size: 12px;
+    }
+    .dns-row:last-child { border-bottom: none; }
+    .dns-label { color: #9ca3af; }
+    .dns-value { color: #e0e0e0; font-weight: 500; }
+
+    .agent-row {
+      display: flex;
+      gap: 10px;
+      padding: 7px 0;
+      border-bottom: 1px solid #1e293b;
+      font-size: 12px;
+    }
+    .agent-row:last-child { border-bottom: none; }
+    .agent-emoji { font-size: 14px; }
+    .agent-name { color: #e0e0e0; font-weight: 500; }
+    .agent-role { color: #6b7280; }
+
+    .footer {
+      padding: 20px 32px;
+      border-top: 1px solid #1e293b;
+      font-size: 11px;
+      color: #4b5563;
+      text-align: center;
+    }
+    .refresh-btn {
+      background: #1e293b;
+      border: 1px solid #374151;
+      color: #9ca3af;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+      margin-left: 12px;
+    }
+    .refresh-btn:hover { background: #263345; color: #e0e0e0; }
+    .updated { font-size: 11px; color: #4b5563; margin-left: 12px; }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .goal-section { margin-bottom: 16px; }
+    .goal-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; margin-bottom: 8px; }
+
+    .zaka-architecture {
+      background: #0d0d15;
+      border: 1px solid #2a1a4a;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 12px;
+      font-size: 11px;
+    }
+    .arch-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      color: #d1d5db;
+    }
+    .arch-row span:first-child { color: #a855f7; font-weight: 600; }
+    .arch-row span:last-child { color: #6b7280; }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>🛰️ Mission Control</h1>
+  <div class="subtitle">Blazr / BioMuti / Zaka — Live Operations Dashboard</div>
+  <div class="status-row">
+    <div class="status-pill pill-bad" id="dns-alert">
+      <span class="dot dot-red"></span>
+      DNS Pending (CNAME)
+    </div>
+    <div class="status-pill pill-ok">
+      <span class="dot dot-green"></span>
+      Cannabis Pipeline Active
+    </div>
+    <div class="status-pill pill-new">
+      <span class="dot dot-purple"></span>
+      Zaka Wallet: Building
+    </div>
+    <div class="status-pill pill-ok">
+      <span class="dot dot-green"></span>
+      Email System Clean
+    </div>
+    <div class="status-pill pill-warn">
+      <span class="dot dot-yellow"></span>
+      BioMuti Outreach Not Started
+    </div>
+  </div>
+</div>
+
+<div class="grid">
+
+  <!-- ZAKA WALLET CARD -->
+  <div class="card" style="border-color: #2a1a4a;">
+    <div class="card-title" style="color:#a855f7;">💳 Zaka Wallet — Cannabis Payment Infrastructure</div>
+    <div class="big-number" style="font-size:36px;">SA Cannabis <span>Wallet</span></div>
+    <div class="sub">First-mover payment rails for licensed dispensaries</div>
+    <br>
+    <div class="zaka-architecture">
+      <div class="arch-row"><span>Card Load</span><span>Peach Payments (PSP)</span></div>
+      <div class="arch-row"><span>Bank Account</span><span>Merchant account (T+0 credit)</span></div>
+      <div class="arch-row"><span>Wallet Engine</span><span>Zaka builds (Supabase)</span></div>
+      <div class="arch-row"><span>Payout Rail</span><span>PayShap (R50K max, instant)</span></div>
+      <div class="arch-row"><span>Settlement</span><span>T+1 / T+2 to dispensaries</span></div>
+      <div class="arch-row"><span>Float Required</span><span style="color:#22c55e">None (T+0 crediting)</span></div>
+    </div>
+    <br>
+    <div class="source-row">
+      <span class="source-name">Merchant account</span>
+      <span class="badge badge-yellow">Tebogo — this week</span>
+    </div>
+    <div class="source-row">
+      <span class="source-name">Peach Payments</span>
+      <span class="badge badge-yellow">Apply this week</span>
+    </div>
+    <div class="source-row">
+      <span class="source-name">PayShap GoldTier API</span>
+      <span class="badge badge-yellow">Sign up this week</span>
+    </div>
+    <div class="source-row">
+      <span class="source-name">Wallet engine</span>
+      <span class="badge badge-purple">Ema — building</span>
+    </div>
+    <br>
+    <div style="font-size:11px; color:#6b7280;">Plan: /zaka-wallet-masterplan.md · v1.0 · 2026-03-24</div>
+  </div>
+
+  <!-- ZAKA LEADS CARD -->
+  <div class="card" style="border-color: #2a1a4a;">
+    <div class="card-title" style="color:#a855f7;">📡 Zaka Merchant Pipeline</div>
+    <div class="big-number" id="zaka-leads">100 <span>leads</span></div>
+    <div class="sub">Global high-risk merchant leads</div>
+    <br>
+    <div class="source-row">
+      <span class="source-name">Source</span>
+      <span class="badge badge-purple">CoinGecko (crypto exchanges)</span>
+    </div>
+    <div class="source-row">
+      <span class="source-name">Merchant types</span>
+      <span class="badge badge-purple">iGaming · Forex · Crypto · Adult · SaaS</span>
+    </div>
+    <div class="source-row">
+      <span class="source-name">Pipeline</span>
+      <span class="source-count" id="zaka-pipeline">—</span>
+    </div>
+    <div class="source-row">
+      <span class="source-name">DB table</span>
+      <span class="badge badge-green">zaka_leads ✅</span>
+    </div>
+    <div class="source-row">
+      <span class="source-name">Scraper</span>
+      <span class="badge badge-purple">zaka-scraper.py</span>
+    </div>
+    <br>
+    <div style="font-size:11px; color:#6b7280;">DB: zaka_leads (Supabase) · Outreach via Twilio + Resend</div>
+  </div>
+
+  <!-- CANNABIS PIPELINE CARD -->
+  <div class="card">
+    <div class="card-title">📡 Cannabis Pipeline — Live Scraper</div>
+    <div class="big-number" id="total-pipeline">— <span>leads</span></div>
+    <div class="sub">Cycle <span id="cycle-num">—</span> · Today: +<span id="today-gain">—</span> new leads</div>
+    <br>
+    <div class="source-row">
+      <span class="source-name">Google Places</span>
+      <span><span class="source-count" id="gp-count">—</span> <span class="badge badge-green">Active</span></span>
+    </div>
+    <div class="source-row">
+      <span class="source-name">OpenStreetMap</span>
+      <span><span class="source-count" id="osm-count">—</span> <span class="badge badge-yellow">Partial</span></span>
+    </div>
+    <div class="source-row">
+      <span class="source-name">Cannastay</span>
+      <span><span class="source-count" id="canna-count">—</span> <span class="badge badge-yellow">Slow</span></span>
+    </div>
+    <div class="source-row">
+      <span class="source-name">WhatsApp / Social</span>
+      <span class="badge badge-green">Active</span>
+    </div>
+  </div>
+
+  <!-- ALERTS CARD -->
+  <div class="card">
+    <div class="card-title">🚨 Priority Alerts</div>
+    <div class="alert-item">
+      <div class="alert-icon"><span style="color:#ef4444">●</span></div>
+      <div>
+        <div class="alert-title">wholesale.blazr.africa DNS</div>
+        <div class="alert-desc">CNAME not added — xneelo ticket #3541531</div>
+        <div class="alert-desc">Target: 8560f7f17db0004.vercel-dns-016.com</div>
+      </div>
+    </div>
+    <div class="alert-item">
+      <div class="alert-icon"><span style="color:#a855f7">●</span></div>
+      <div>
+        <div class="alert-title">Zaka Wallet — Tebogo tasks</div>
+        <div class="alert-desc">Merchant account + Peach + PayShap this week</div>
+      </div>
+    </div>
+    <div class="alert-item">
+      <div class="alert-icon"><span style="color:#f59e0b">●</span></div>
+      <div>
+        <div class="alert-title">BioMuti outreach not started</div>
+        <div class="alert-desc">8,841+ leads ready — outreach flow needs building</div>
+      </div>
+    </div>
+    <div class="alert-item">
+      <div class="alert-icon"><span style="color:#22c55e">●</span></div>
+      <div>
+        <div class="alert-title">Pipeline healthy</div>
+        <div class="alert-desc">All scrapers running, no failures detected</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BLAZR STATUS -->
+  <div class="card">
+    <div class="card-title">🌐 Blazr Wholesale</div>
+    <div class="dns-status">
+      <div class="dns-row">
+        <span class="dns-label">wholesale.blazr.africa</span>
+        <span class="badge badge-yellow">Old build (xneelo)</span>
+      </div>
+      <div class="dns-row">
+        <span class="dns-label">blazr-app.vercel.app</span>
+        <span class="badge badge-green">Latest build</span>
+      </div>
+      <div class="dns-row">
+        <span class="dns-label">Resend email (DKIM)</span>
+        <span class="badge badge-green">Verified ✅</span>
+      </div>
+      <div class="dns-row">
+        <span class="dns-label">Resend SPF</span>
+        <span class="badge badge-green">Verified ✅</span>
+      </div>
+      <div class="dns-row">
+        <span class="dns-label">xneelo CNAME</span>
+        <span class="badge badge-red">Not added</span>
+      </div>
+      <div class="dns-row">
+        <span class="dns-label">Ticket #</span>
+        <span style="color:#f59e0b; font-weight:600">#3541531</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BIO-MUTI OUTREACH -->
+  <div class="card">
+    <div class="card-title">💰 BioMuti Wholesale Outreach</div>
+    <div class="big-number" id="biomuti-leads">11,064 <span>leads</span></div>
+    <div class="sub">Dispensaries & cannabis shops across SA</div>
+    <br>
+    <div class="source-row">
+      <span class="source-name">WhatsApp contacts</span>
+      <span class="badge badge-green">Available</span>
+    </div>
+    <div class="source-row">
+      <span class="source-name">Phone numbers</span>
+      <span class="badge badge-green">Available</span>
+    </div>
+    <div class="source-row">
+      <span class="source-name">Email (Resend)</span>
+      <span class="badge badge-green">Connected</span>
+    </div>
+    <div class="source-row">
+      <span class="source-name">Outreach flow</span>
+      <span class="badge badge-red">Not built</span>
+    </div>
+    <br>
+    <div style="font-size:12px; color:#6b7280;">Products: Flower · Gummies · Pre-rolls · Concentrates · Vapes</div>
+  </div>
+
+  <!-- R&D TEAM -->
+  <div class="card">
+    <div class="card-title">🧪 R&D Team — 5 Agents (BioMuti)</div>
+    <div class="agent-row">
+      <span class="agent-emoji">🧠</span>
+      <div>
+        <div class="agent-name">Product & UX Researcher</div>
+        <div class="agent-role">User behaviour, features, gaps</div>
+      </div>
+    </div>
+    <div class="agent-row">
+      <span class="agent-emoji">📈</span>
+      <div>
+        <div class="agent-name">Growth Strategist</div>
+        <div class="agent-role">Acquisition, expansion, channels</div>
+      </div>
+    </div>
+    <div class="agent-row">
+      <span class="agent-emoji">💰</span>
+      <div>
+        <div class="agent-name">Revenue Analyst</div>
+        <div class="agent-role">Margins, pricing, revenue streams</div>
+      </div>
+    </div>
+    <div class="agent-row">
+      <span class="agent-emoji">⚙️</span>
+      <div>
+        <div class="agent-name">Technical Architect</div>
+        <div class="agent-role">Platform, automation, AI systems</div>
+      </div>
+    </div>
+    <div class="agent-row">
+      <span class="agent-emoji">🗂️</span>
+      <div>
+        <div class="agent-name">Operations Lead</div>
+        <div class="agent-role">Execution, pipeline, supply chain</div>
+      </div>
+    </div>
+    <br>
+    <div style="font-size:11px; color:#6b7280;">Next debate: Sun 29 Mar @ 6pm SAST</div>
+  </div>
+
+  <!-- AUTONOMOUS EMPLOYEE -->
+  <div class="card">
+    <div class="card-title">🌙 Autonomous Employee</div>
+    <div class="source-row">
+      <span class="source-name">Daemon</span>
+      <span class="badge badge-green">Running</span>
+    </div>
+    <div class="source-row">
+      <span class="source-name">Schedule</span>
+      <span>Daily 2am SAST</span>
+    </div>
+    <div class="source-row">
+      <span class="source-name">Last logged</span>
+      <span style="color:#f59e0b">Unknown (log empty)</span>
+    </div>
+    <div class="source-row">
+      <span class="source-name">Tonight's task</span>
+      <span class="badge badge-purple">Zaka scraper continuation</span>
+    </div>
+    <br>
+    <div style="font-size:11px; color:#6b7280;">Log: /mission-control/autonomous/</div>
+  </div>
+
+  <!-- GOALS: SHORT TERM -->
+  <div class="card">
+    <div class="card-title">🎯 Goals — This Week</div>
+    <div class="goal-section">
+      <div class="goal-label">Zaka Wallet (Priority)</div>
+      <div class="todo-item">
+        <div class="checkbox"></div>
+        Open Zaka merchant account at bank (Tebogo)
+      </div>
+      <div class="todo-item">
+        <div class="checkbox"></div>
+        Apply to Peach Payments (Tebogo)
+      </div>
+      <div class="todo-item">
+        <div class="checkbox"></div>
+        Sign up for Standard Bank PayShap GoldTier API (Tebogo)
+      </div>
+      <div class="todo-item">
+        <div class="checkbox"></div>
+        Build Zaka wallet engine (Ema)
+      </div>
+    </div>
+    <div class="goal-section">
+      <div class="goal-label">Blazr / BioMuti</div>
+      <div class="todo-item">
+        <div class="checkbox"></div>
+        Get wholesale.blazr.africa routing to Vercel (DNS)
+      </div>
+      <div class="todo-item">
+        <div class="checkbox"></div>
+        Build BioMuti outreach message sequence
+      </div>
+      <div class="todo-item">
+        <div class="checkbox"></div>
+        Generate first R&D memo (Sun debate)
+      </div>
+    </div>
+    <div class="goal-section">
+      <div class="goal-label">Zaka Merchant Acquisition</div>
+      <div class="todo-item">
+        <div class="checkbox"></div>
+        Run Zaka scraper — iGaming + Forex sources
+      </div>
+      <div class="todo-item">
+        <div class="checkbox"></div>
+        Grow Zaka leads to 500+
+      </div>
+    </div>
+  </div>
+
+  <!-- KEY DECISIONS TODAY -->
+  <div class="card">
+    <div class="card-title">📌 Key Decisions (2026-03-24)</div>
+    <div class="todo-item" style="font-size:12px">
+      <div class="checkbox checked"></div>
+      Zaka Wallet: white-label stack (Peach + PayShap + direct bank)
+    </div>
+    <div class="todo-item" style="font-size:12px">
+      <div class="checkbox checked"></div>
+      T+0 merchant crediting → zero float needed
+    </div>
+    <div class="todo-item" style="font-size:12px">
+      <div class="checkbox checked"></div>
+      Zaka = bridge between card payment and dispensary settlement
+    </div>
+    <div class="todo-item" style="font-size:12px">
+      <div class="checkbox checked"></div>
+      Zaka wallet: 8-week beta launch target
+    </div>
+    <div class="todo-item" style="font-size:12px">
+      <div class="checkbox checked"></div>
+      Strategy: JVOR global merchant acquisition + Zaka wallet infra
+    </div>
+    <div class="todo-item" style="font-size:12px">
+      <div class="checkbox checked"></div>
+      No FSP licence needed (Zaka = wallet operator, not PSP)
+    </div>
+    <div class="todo-item" style="font-size:12px">
+      <div class="checkbox checked"></div>
+      PayShap limit: R50,000/transaction (no longer R3,000)
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  🗝️ Ema · Mission Control · Updated 2026-03-24
+  <button class="refresh-btn" onclick="loadData()">↻ Refresh</button>
+  <span class="updated" id="updated-time"></span>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://llsrgsbzhubwexbozerg.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxsc3Jnc2J6aHVid2V4Ym96ZXJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MjQ4NzcsImV4cCI6MjA4OTUwMDg3N30.GqN4xDXHLLH2AL3xV-TO4h1xz1eNc9W6XBnqJ5tVXVM';
+
+async function fetchPipeline() {
+  try {
+    const r = await fetch('/scraper-status.json');
+    const data = await r.json();
+    document.getElementById('total-pipeline').innerHTML = `${data.totalPipeline.toLocaleString()} <span>leads</span>`;
+    document.getElementById('cycle-num').textContent = data.cycle;
+    document.getElementById('today-gain').textContent = (data.totalPipeline - 5719).toLocaleString();
+  } catch(e) {}
+}
+
+async function fetchZakaStats() {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/zaka_leads?select=id`, {
+      headers: {
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxsc3Jnc2J6aHVid2V4Ym96ZXJnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzkyNDg3NywiZXhwIjoyMDg5NTAwODc3fQ.TVrIHztf8V_ZId0XPu2vw6C5RTTBgkcxSaZabKVNQnM',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxsc3Jnc2J6aHVid2V4Ym96ZXJnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzkyNDg3NywiZXhwIjoyMDg5NTAwODc3fQ.TVrIHztf8V_ZId0XPu2vw6C5RTTBgkcxSaZabKVNQnM'
+      }
+    });
+    if (r.ok) {
+      const data = await r.json();
+      document.getElementById('zaka-leads').innerHTML = `${data.length.toLocaleString()} <span>leads</span>`;
+      document.getElementById('zaka-pipeline').textContent = data.length + ' in DB';
+    }
+  } catch(e) {}
+}
+
+function updateTime() {
+  const now = new Date();
+  const sa = new Date(now.toLocaleString('en-US', {timeZone: 'Africa/Johannesburg'}));
+  document.getElementById('updated-time').textContent =
+    'Updated ' + sa.toLocaleTimeString('en-ZA', {hour:'2-digit', minute:'2-digit', timeZoneName:'short'});
+}
+
+async function loadData() {
+  await fetchPipeline();
+  await fetchZakaStats();
+  updateTime();
+}
+
+loadData();
+setInterval(loadData, 30 * 60 * 1000);
+</script>
+</body>
+</html>

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ArrowRight, ShoppingBag } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
-import { useCart } from "@/contexts/CartContext"
+import { CartProvider, useCart } from "@/contexts/CartContext"
 
 interface Category {
   id: string
@@ -28,7 +28,7 @@ interface Product {
   categories: { name: string; icon: string } | null
 }
 
-export default function CataloguePage() {
+function CatalogueContent() {
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
@@ -452,5 +452,13 @@ export default function CataloguePage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function CataloguePage() {
+  return (
+    <CartProvider>
+      <CatalogueContent />
+    </CartProvider>
   )
 }

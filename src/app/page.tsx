@@ -1,5 +1,11 @@
 import Link from "next/link"
+import { Metadata } from "next"
 import { Button } from "@/components/ui/button"
+
+export const metadata: Metadata = {
+  title: "BioMuti Wholesale — Cannabis Engineered for Dispensaries",
+  description: "South Africa's premier B2B cannabis platform. Lab-tested products from licensed cultivators. Shop flower, edibles, vapes, concentrates.",
+}
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { ArrowRight, CheckCircle, Shield, Package, Truck } from "lucide-react"

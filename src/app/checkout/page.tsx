@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import { CartProvider } from "@/contexts/CartContext"
 import { useCart } from "@/contexts/CartContext"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -27,11 +28,19 @@ const BANK_DETAILS = {
 }
 
 interface OrderSuccess {
-  invoiceNumber: string
+  orderNumber: string
   orderId: string
 }
 
 export default function CheckoutPage() {
+  return (
+    <CartProvider>
+      <CheckoutContent />
+    </CartProvider>
+  )
+}
+
+function CheckoutContent() {
   const router = useRouter()
   const { cartItems, cartTotal, clearCart, loadCartFromSupabase } = useCart()
   const [user, setUser] = useState<User | null>(null)
@@ -111,7 +120,7 @@ export default function CheckoutPage() {
       }
 
       clearCart()
-      setOrderSuccess({ invoiceNumber: data.invoice_number, orderId: data.order_id })
+      setOrderSuccess({ orderNumber: data.order_number, orderId: data.order_id })
     } catch (err) {
       setError("Something went wrong. Please try again.")
     } finally {
@@ -142,22 +151,22 @@ export default function CheckoutPage() {
             <CheckCircle className="h-8 w-8 text-green-400" />
           </div>
           <h1 className="mb-2 text-3xl font-bold" style={{ fontFamily: "var(--font-boldena), sans-serif" }}>
-            Order Placed!
+            Order Received!
           </h1>
-          <p className="mb-6 text-[#888]">
-            Thank you for your order. We&apos;ll review it and contact you shortly.
+          <p className="mb-8 text-[#888]">
+            Your order has been received. A confirmation has been sent to your email.
           </p>
 
-          {/* Invoice card */}
+          {/* Order number + total */}
           <Card className="card-surface mb-6 text-left">
             <CardContent className="p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-[#737373] uppercase tracking-wider">Invoice Number</p>
-                  <p className="mt-1 font-mono text-xl font-bold text-[#FAD03F]">{orderSuccess.invoiceNumber}</p>
+                  <p className="text-xs text-[#737373] uppercase tracking-wider">Order Number</p>
+                  <p className="mt-1 font-mono text-xl font-bold text-[#FAD03F]">{orderSuccess.orderNumber}</p>
                 </div>
                 <button
-                  onClick={() => copyInvoice(orderSuccess.invoiceNumber)}
+                  onClick={() => copyInvoice(orderSuccess.orderNumber)}
                   className="flex items-center gap-1.5 text-xs text-[#737373] hover:text-white transition-colors"
                 >
                   {copied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
@@ -166,8 +175,11 @@ export default function CheckoutPage() {
               </div>
               <div className="h-px bg-[#1e1e1e]" />
               <div>
-                <p className="text-xs text-[#737373] uppercase tracking-wider mb-3">Order Total</p>
-                <p className="text-3xl font-bold text-white">{formatPrice(cartTotal > 0 ? cartTotal : 0)}</p>
+                <p className="text-xs text-[#737373] uppercase tracking-wider mb-1">Order Total</p>
+                <p className="text-3xl font-bold text-white">R{(cartTotal > 0 ? cartTotal : 0).toLocaleString("en-ZA")}</p>
+              </div>
+              <div className="rounded-lg border border-[#FAD03F]/20 bg-[#FAD03F]/5 p-3 text-xs text-[#888]">
+                Please use your order number when making payment.
               </div>
             </CardContent>
           </Card>
@@ -179,39 +191,38 @@ export default function CheckoutPage() {
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-[#737373]">Account Name</span>
-                <span className="font-medium text-white">{BANK_DETAILS.accountName}</span>
-              </div>
-              <div className="flex justify-between">
                 <span className="text-[#737373]">Bank</span>
-                <span className="font-medium text-white">{BANK_DETAILS.bank}</span>
+                <span className="font-medium text-white">Nedbank</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#737373]">Account Number</span>
-                <span className="font-mono font-medium text-white">{BANK_DETAILS.accountNumber}</span>
+                <span className="text-[#737373]">Account</span>
+                <span className="font-mono font-medium text-white">1338261843</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#737373]">Branch Code</span>
-                <span className="font-mono font-medium text-white">{BANK_DETAILS.branch}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#737373]">SWIFT Code</span>
-                <span className="font-mono font-medium text-white">{BANK_DETAILS.swift}</span>
+                <span className="text-[#737373]">Branch</span>
+                <span className="font-mono font-medium text-white">198765</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-[#737373]">Reference</span>
-                <span className="font-mono font-medium text-[#FAD03F]">{orderSuccess.invoiceNumber}</span>
-              </div>
-              <div className="mt-3 rounded-lg border border-[#FAD03F]/20 bg-[#FAD03F]/5 p-3 text-xs text-[#888]">
-                Please send your Proof of Payment to{" "}
-                <a href={`mailto:${BANK_DETAILS.email}`} className="text-[#FAD03F] hover:underline">
-                  {BANK_DETAILS.email}
-                </a>
+                <span className="font-mono font-medium text-[#FAD03F]">{orderSuccess.orderNumber}</span>
               </div>
             </CardContent>
           </Card>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
+          {/* WhatsApp support */}
+          <div className="text-sm text-[#666]">
+            Questions?{" "}
+            <a
+              href="https://wa.me/276663249083"
+              className="text-[#FAD03F] hover:underline"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              WhatsApp support: +27 66 324 9083
+            </a>
+          </div>
+
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link href="/catalogue" className="flex-1">
               <Button variant="outline" className="w-full border-[#2a2a2a] text-[#888] hover:bg-[#1a1a1a] hover:text-white">
                 Continue Shopping
