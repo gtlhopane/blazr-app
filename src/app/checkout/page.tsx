@@ -94,7 +94,7 @@ function CheckoutContent() {
     setError(null)
 
     try {
-      const res = await fetch("/api/checkout", {
+      const res = await fetch("/api/wholesale-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -107,6 +107,8 @@ function CheckoutContent() {
           items: cartItems.map((item) => ({
             product_id: item.productId,
             name: item.name,
+            strain_name: item.strain_name || item.name,
+            category: item.category,
             quantity: item.quantity,
             unit_price: item.price,
           })),
