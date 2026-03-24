@@ -275,7 +275,7 @@ export async function POST(req: NextRequest) {
       // Send admin email
       const adminEmailPayload: Record<string, unknown> = {
         from: "Blazr Wholesale <blazr@wholesale.blazr.africa>",
-        to: ["gtlhopane@gmail.com"],
+        to: ["wholesale@blazr.africa"],
         subject: `New Order ${invoice_number} — ${buyer_name} (R${total_price.toLocaleString()})`,
         html: adminEmailHtml,
       }

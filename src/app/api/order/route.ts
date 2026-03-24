@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
           </div>
 
           <p style="color: #666; font-size: 12px; text-align: center; margin-top: 30px;">
-            BioMuti / Blazr Wholesale · www.blazr.africa · Contact: gtlhopane@gmail.com
+            BioMuti / Blazr Wholesale · www.blazr.africa · Contact: wholesale@blazr.africa
           </p>
         </div>
       `
@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           from: "Blazr Wholesale <blazr@biomuti.co.za>",
-          to: ["gtlhopane@gmail.com"],
+          to: ["wholesale@blazr.africa"],
           subject: `New ${catInfo.label} Order ${invoice_number} — ${buyer_name} (${total_units} units)`,
           html: emailHtml,
         }),
