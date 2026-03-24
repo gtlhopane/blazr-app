@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ArrowRight, ShoppingBag } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
-import { CartProvider, useCart } from "@/contexts/CartContext"
+import { useCart } from "@/contexts/CartContext"
 
 interface Category {
   id: string
@@ -456,9 +456,5 @@ function CatalogueContent() {
 }
 
 export default function CataloguePage() {
-  return (
-    <CartProvider>
-      <CatalogueContent />
-    </CartProvider>
-  )
+  return <CatalogueContent />
 }

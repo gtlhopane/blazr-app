@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { CartProvider } from "@/contexts/CartContext"
+
 import { useCart } from "@/contexts/CartContext"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
