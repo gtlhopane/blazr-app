@@ -188,7 +188,7 @@ export async function POST(req: NextRequest) {
               We&apos;ll review your order and contact you at <strong>${buyer_phone}</strong> within 24 hours to confirm.
             </p>
             <p style="font-size: 13px; color: #888; margin-top: 8px;">
-              Questions? WhatsApp us: <a href="https://wa.me/276663249083" style="color: #FAD03F;">+27 66 324 9083</a>
+              Questions? WhatsApp us: <a href="https://wa.me/27663249083" style="color: #FAD03F;">+27 66 324 9083</a>
             </p>
 
             <p style="color: #555; font-size: 12px; text-align: center; margin-top: 30px;">

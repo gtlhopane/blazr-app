@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client"
 
 import { useCart } from "@/contexts/CartContext"
 import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -30,14 +31,11 @@ const BANK_DETAILS = {
 interface OrderSuccess {
   orderNumber: string
   orderId: string
+  total: number
 }
 
 export default function CheckoutPage() {
-  return (
-    <CartProvider>
-      <CheckoutContent />
-    </CartProvider>
-  )
+  return <CheckoutContent />
 }
 
 function CheckoutContent() {
@@ -60,7 +58,7 @@ function CheckoutContent() {
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) {
         router.push("/login?returnTo=/checkout")
         return
@@ -73,11 +71,31 @@ function CheckoutContent() {
       setBuyerPhone(meta.phone || "")
       setBuyerCompany(meta.company || "")
       setDeliveryAddress(meta.address || "")
-      // Ensure cart is loaded from localStorage after auth
-      loadCartFromSupabase(data.user.id)
+
+      // Load cart from Supabase first
+      await loadCartFromSupabase(data.user.id)
+
+      // Also merge localStorage cart as backup (non-destructive)
+      try {
+        const stored = localStorage.getItem("blazr_cart")
+        if (stored) {
+          const localItems = JSON.parse(stored)
+          if (localItems.length > 0) {
+            for (const item of localItems) {
+              await supabase.from("user_carts").upsert(
+                { user_id: data.user.id, product_id: item.productId, quantity: item.quantity },
+                { onConflict: "user_id,product_id" }
+              )
+            }
+            // Reload from Supabase with merged data
+            await loadCartFromSupabase(data.user.id)
+          }
+        }
+      } catch {}
+
       setLoading(false)
     })
-  }, [router])
+  }, [router, loadCartFromSupabase])
 
   async function handlePlaceOrder(e: React.FormEvent) {
     e.preventDefault()
@@ -116,13 +134,18 @@ function CheckoutContent() {
       })
 
       const data = await res.json()
+      if (data.duplicate) {
+        toast.error("You already have a pending order. Check your dashboard.")
+        router.push("/buyer")
+        return
+      }
       if (!res.ok) {
         setError(data.error || "Failed to place order")
         return
       }
 
       clearCart()
-      setOrderSuccess({ orderNumber: data.order_number, orderId: data.order_id })
+      setOrderSuccess({ orderNumber: data.order_number, orderId: data.order_id, total: data.total })
     } catch (err) {
       setError("Something went wrong. Please try again.")
     } finally {
@@ -178,7 +201,7 @@ function CheckoutContent() {
               <div className="h-px bg-[#1e1e1e]" />
               <div>
                 <p className="text-xs text-[#737373] uppercase tracking-wider mb-1">Order Total</p>
-                <p className="text-3xl font-bold text-white">R{(cartTotal > 0 ? cartTotal : 0).toLocaleString("en-ZA")}</p>
+                <p className="text-3xl font-bold text-white">R{orderSuccess.total.toLocaleString("en-ZA")}</p>
               </div>
               <div className="rounded-lg border border-[#FAD03F]/20 bg-[#FAD03F]/5 p-3 text-xs text-[#888]">
                 Please use your order number when making payment.
@@ -215,7 +238,7 @@ function CheckoutContent() {
           <div className="text-sm text-[#666]">
             Questions?{" "}
             <a
-              href="https://wa.me/276663249083"
+              href="https://wa.me/27663249083"
               className="text-[#FAD03F] hover:underline"
               target="_blank"
               rel="noopener noreferrer"

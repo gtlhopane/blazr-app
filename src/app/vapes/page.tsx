@@ -297,15 +297,16 @@ export default function VapesPage() {
                 <h2 className="text-lg font-semibold">Select Strains</h2>
                 <p className="text-xs text-[#666] mt-0.5">Mix and match — minimum 10 units total</p>
               </div>
-              <div className="flex items-center gap-2">
-                {!showAll && (
-                  <button
-                    onClick={autoFillMix}
-                    className="text-xs text-[#888] hover:text-white border border-[#2a2a2a] hover:border-[#444] px-3 py-1.5 rounded-lg transition-colors"
-                  >
-                    Suggested Mix
-                  </button>
-                )}
+              {/* Helper text */}
+            <div className="rounded-xl border border-[#FAD03F]/20 bg-[#FAD03F]/5 px-4 py-3 text-sm text-[#d1d5db]">
+              <span className="text-[#FAD03F] font-semibold">How it works:</span> Choose any strains you want.
+              Minimum order is <span className="text-[#FAD03F] font-semibold">10 units total</span> — mix and match freely.
+              {!showAll && (
+                <> Try the <button onClick={autoFillMix} className="text-[#FAD03F] underline hover:text-[#f5e07a]">Suggested Mix</button> to get started quickly.</>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
                 <button
                   onClick={() => { setShowAll(!showAll); setSearch("") }}
                   className="text-xs text-[#FAD03F] hover:text-[#f5e07a] border border-[#FAD03F]/30 hover:border-[#FAD03F]/60 px-3 py-1.5 rounded-lg transition-colors"
@@ -398,7 +399,11 @@ export default function VapesPage() {
                           <button
                             onClick={() => updateQty(strain.slug, -1)}
                             disabled={qty === 0}
-                            className="flex items-center justify-center w-8 h-8 rounded-lg border border-[#2a2a2a] text-[#888] hover:border-[#444] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                            className={`flex items-center justify-center w-8 h-8 rounded-lg border transition-all ${
+                              qty > 0
+                                ? "border-[#FAD03F]/50 text-[#FAD03F] bg-[#FAD03F]/10 hover:bg-[#FAD03F]/15"
+                                : "border-[#2a2a2a] text-[#888] hover:border-[#444] hover:text-white"
+                            } disabled:opacity-30 disabled:cursor-not-allowed`}
                           >
                             <Minus className="h-3.5 w-3.5" />
                           </button>
@@ -410,7 +415,11 @@ export default function VapesPage() {
                           </span>
                           <button
                             onClick={() => updateQty(strain.slug, 1)}
-                            className="flex items-center justify-center w-8 h-8 rounded-lg border border-[#2a2a2a] text-[#888] hover:border-[#FAD03F]/50 hover:text-[#FAD03F] transition-all"
+                            className={`flex items-center justify-center w-8 h-8 rounded-lg border transition-all ${
+                              qty > 0
+                                ? "border-[#FAD03F]/50 text-[#FAD03F] bg-[#FAD03F]/10 hover:bg-[#FAD03F]/15"
+                                : "border-[#2a2a2a] text-[#888] hover:border-[#FAD03F]/50 hover:text-[#FAD03F]"
+                            }`}
                           >
                             <Plus className="h-3.5 w-3.5" />
                           </button>
@@ -523,7 +532,7 @@ export default function VapesPage() {
                   {moqMet ? (
                     <>Order {totalUnits} Units <ArrowRight className="h-4 w-4" /></>
                   ) : (
-                    <>Select {MOQ} units to continue</>
+                    <>Select {MOQ - totalUnits > 0 ? `${MOQ - totalUnits} more` : `${MOQ}`} unit{MOQ - totalUnits !== 1 ? "s" : ""} to reach MOQ</>
                   )}
                 </Button>
               ) : (

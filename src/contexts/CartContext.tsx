@@ -72,7 +72,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const cartTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
-  const addToCart = useCallback((item: Omit<CartItem, "quantity">, qty: number) => {
+  const addToCart = useCallback(async (item: Omit<CartItem, "quantity">, qty: number) => {
     setCartItems((prev) => {
       const existing = prev.find((i) => i.productId === item.productId)
       if (existing) {
@@ -85,20 +85,75 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return [...prev, { ...item, quantity: qty }]
     })
     toast.success(`${item.name} added to cart`)
+
+    // Sync to Supabase if logged in (non-blocking)
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        await supabase.from("user_carts").upsert(
+          {
+            user_id: user.id,
+            product_id: item.productId,
+            quantity: qty,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,product_id" }
+        ).select()
+        // If product already exists in DB, fetch current qty and add
+        const { data: existing } = await supabase
+          .from("user_carts")
+          .select("quantity")
+          .eq("user_id", user.id)
+          .eq("product_id", item.productId)
+          .single()
+        if (existing && existing.quantity !== qty) {
+          await supabase.from("user_carts").update({
+            quantity: existing.quantity + qty,
+            updated_at: new Date().toISOString(),
+          }).eq("user_id", user.id).eq("product_id", item.productId)
+        }
+      }
+    } catch {}
   }, [])
 
-  const removeFromCart = useCallback((productId: string) => {
+  const removeFromCart = useCallback(async (productId: string) => {
     setCartItems((prev) => prev.filter((i) => i.productId !== productId))
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        await supabase.from("user_carts").delete()
+          .eq("user_id", user.id).eq("product_id", productId)
+      }
+    } catch {}
   }, [])
 
-  const updateQuantity = useCallback((productId: string, qty: number) => {
+  const updateQuantity = useCallback(async (productId: string, qty: number) => {
     if (qty <= 0) {
       setCartItems((prev) => prev.filter((i) => i.productId !== productId))
-      return
+    } else {
+      setCartItems((prev) =>
+        prev.map((i) => (i.productId === productId ? { ...i, quantity: qty } : i))
+      )
     }
-    setCartItems((prev) =>
-      prev.map((i) => (i.productId === productId ? { ...i, quantity: qty } : i))
-    )
+
+    // Sync to Supabase if logged in
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        if (qty <= 0) {
+          await supabase.from("user_carts").delete()
+            .eq("user_id", user.id).eq("product_id", productId)
+        } else {
+          await supabase.from("user_carts").upsert(
+            { user_id: user.id, product_id: productId, quantity: qty, updated_at: new Date().toISOString() },
+            { onConflict: "user_id,product_id" }
+          )
+        }
+      }
+    } catch {}
   }, [])
 
   const clearCart = useCallback(() => {
@@ -112,9 +167,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const syncCartToSupabase = useCallback(async (userId: string) => {
     try {
       const supabase = createClient()
-      // Try to upsert each item
       for (const item of cartItems) {
-        await supabase.from("carts").upsert(
+        await supabase.from("user_carts").upsert(
           {
             user_id: userId,
             product_id: item.productId,
@@ -124,7 +178,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         )
       }
     } catch (e) {
-      // Carts table may not exist — silent fail
       console.warn("Cart sync to Supabase failed:", e)
     }
   }, [cartItems])
@@ -134,7 +187,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     try {
       const supabase = createClient()
       const { data, error } = await supabase
-        .from("carts")
+        .from("user_carts")
         .select("*, products(name, wholesale_price, image_url, unit, moq, categories(name))")
         .eq("user_id", userId)
 

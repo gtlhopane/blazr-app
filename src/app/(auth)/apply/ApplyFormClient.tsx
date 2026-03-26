@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { createClient } from "@/lib/supabase/client"
+import { useCart } from "@/contexts/CartContext"
 import { toast } from "sonner"
 
 const STEPS = [
@@ -27,6 +28,7 @@ export default function ApplyFormClient() {
   const [showPw, setShowPw] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams() ?? new URLSearchParams()
+  const { cartItems } = useCart()
 
   // Pre-fill order from catalogue tier selection
   const prefillProduct = searchParams.get("product") || ""
@@ -125,6 +127,19 @@ export default function ApplyFormClient() {
       toast.error("Application submitted but there was an issue. Please contact us.")
     } else {
       toast.success("Application submitted! We'll review within 24 hours.")
+    }
+
+    // Sync cart to Supabase so it persists after login
+    if (authData.user && cartItems.length > 0) {
+      try {
+        const supabase = createClient()
+        for (const item of cartItems) {
+          await supabase.from("user_carts").upsert(
+            { user_id: authData.user.id, product_id: item.productId, quantity: item.quantity },
+            { onConflict: "user_id,product_id" }
+          )
+        }
+      } catch {}
     }
 
     setLoading(false)
