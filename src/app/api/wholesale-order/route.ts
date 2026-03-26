@@ -23,6 +23,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
+    const supabase = createSupabaseAdmin()
+
     // Idempotency: check for existing pending order for this buyer in last 5 minutes
     const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
     const { data: existingOrder } = await supabase
@@ -41,8 +43,6 @@ export async function POST(req: NextRequest) {
         message: "You already have a pending order. Check your dashboard.",
       })
     }
-
-    const supabase = createSupabaseAdmin()
 
     const seq = getTodaySequence()
     const order_number = generateOrderNumber(seq)
